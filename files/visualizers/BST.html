@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BST Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+:root{--bg:#f0f4fa;--border:#d0d9ee;--hdr:#1a2540;--acc:#2563eb;--text:#1e2a45;--dim:#7a8bb0;--code:#334166;--kw:#db2777;--fn:#7c3aed;--str:#059669;--cm:#9dacc8;--num:#d97706;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.hdr{padding:0 16px;background:var(--hdr);border-bottom:1px solid #2a3a60;display:flex;align-items:center;gap:12px;height:44px;flex-shrink:0;}
+.hdr-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;color:#e8f0ff;}
+.hdr-title span{color:#60a5fa;}
+.tab-bar{display:flex;background:var(--hdr);border-bottom:2px solid var(--border);flex-shrink:0;padding:0 8px;gap:2px;overflow-x:auto;}
+.tab-btn{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;padding:7px 12px;border:none;cursor:pointer;border-radius:6px 6px 0 0;border-bottom:3px solid transparent;background:transparent;color:#9dacc8;transition:all .15s;white-space:nowrap;}
+.tab-btn:hover{background:rgba(255,255,255,.06);color:#e2e8f5;}
+.tab-btn.active{background:var(--bg);color:var(--text);border-bottom-color:var(--acc);}
+.tab-panel{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.tab-panel.active{display:flex;}
+.cgrid{display:grid;flex:1;overflow:hidden;}
+.g3{grid-template-columns:1.4fr 1fr .7fr;}
+.panel{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:#fff;position:relative;}
+.panel:last-child{border-right:none;}
+.plabel{font-size:8.5px;font-weight:700;color:var(--dim);letter-spacing:1.5px;padding:5px 12px;background:#f8faff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;text-transform:uppercase;}
+.dot{width:7px;height:7px;border-radius:50%;}
+/* op bar */
+.op-bar{background:#131f3a;border-bottom:1px solid var(--border);padding:6px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-shrink:0;}
+.op-bar label{font-size:9px;color:#9dacc8;font-weight:700;letter-spacing:1px;white-space:nowrap;}
+.op-input{width:68px;background:#0f1a35;border:1.5px solid #2a3a60;border-radius:4px;padding:3px 8px;color:#e2e8f5;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;outline:none;}
+.op-input:focus{border-color:#2563eb;}
+.xb{border:none;border-radius:4px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;cursor:pointer;color:#fff;transition:all .15s;}
+.xb-blue{background:#2563eb;}.xb-blue:hover{background:#1d4ed8;}
+.xb-green{background:#059669;}.xb-green:hover{background:#047857;}
+.xb-red{background:#dc2626;}.xb-red:hover{background:#b91c1c;}
+.xb-purple{background:#7c3aed;}.xb-purple:hover{background:#6d28d9;}
+.xb-teal{background:#0d9488;}.xb-teal:hover{background:#0f766e;}
+.xb-amber{background:#d97706;}.xb-amber:hover{background:#b45309;}
+.xb-gray{background:#475569;}.xb-gray:hover{background:#334155;}
+.ex-btn{background:#1e3560;color:#93c5fd;border:1px solid #2a4a80;border-radius:3px;padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:8.5px;cursor:pointer;transition:all .15s;}
+.ex-btn:hover{background:#2a4a80;color:#e2e8f5;}
+.ex-sep{width:1px;height:16px;background:#2a3a60;flex-shrink:0;}
+/* tree */
+.tree-wrap{flex:1;min-height:0;overflow:hidden;position:relative;}
+.tree-wrap svg{width:100%;height:100%;}
+/* info bar */
+.info-bar{background:#f8faff;border-top:1px solid var(--border);padding:4px 12px;font-size:9.5px;color:var(--dim);flex-shrink:0;display:flex;align-items:center;gap:8px;min-height:28px;}
+.info-bar b{color:var(--text);}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:8.5px;font-weight:700;}
+.bg{background:#dcfce7;color:#15803d;border:1px solid #86efac;}
+.bb{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;}
+.bo{background:#fef9c3;color:#854d0e;border:1px solid #fde047;}
+/* cond bar */
+.cond-bar{background:#f0f6ff;border-top:1px solid #bfdbfe;padding:4px 12px;font-size:9px;color:#1d4ed8;flex-shrink:0;display:none;align-items:center;gap:6px;}
+.cond-bar.show{display:flex;}
+.cp-t{background:#dcfce7;color:#15803d;border:1px solid #86efac;padding:1px 8px;border-radius:10px;font-size:9px;font-weight:700;}
+.cp-f{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;padding:1px 8px;border-radius:10px;font-size:9px;font-weight:700;}
+/* code */
+.code-scroll{flex:1;overflow-y:auto;padding:4px 0;font-size:100%;}
+.code-scroll::-webkit-scrollbar{width:4px;}
+.code-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.line{padding:1px 12px;border-left:3px solid transparent;white-space:pre;font-size:11px;line-height:1.85;color:var(--code);transition:background .1s;}
+.line.hl{background:#fef08a!important;border-left-color:#ca8a04!important;border-left-width:4px!important;color:#1c1917!important;font-weight:700!important;}
+.line.ret{background:rgba(220,38,38,.15)!important;border-left-color:#dc2626!important;border-left-width:4px!important;color:#7f1d1d!important;font-weight:700!important;}
+.line.hl-grn{background:rgba(5,150,105,.15)!important;border-left-color:#059669!important;border-left-width:4px!important;font-weight:700!important;}
+.divl{border-top:1px solid var(--border);margin:4px 0;}
+.kw{color:var(--kw);font-weight:600;}.fn{color:var(--fn);}.str{color:var(--str);}.cm{color:var(--cm);font-style:italic;}.num{color:var(--num);}.ty{color:#0369a1;}
+/* call stack */
+.stack-wrap{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;min-height:0;}
+.stack-wrap::-webkit-scrollbar{width:3px;}
+.stack-wrap::-webkit-scrollbar-thumb{background:var(--border);}
+.sf{border-radius:5px;padding:5px 10px;font-size:9.5px;line-height:1.5;border:1px solid transparent;animation:sfIn .18s ease;position:relative;}
+@keyframes sfIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.sf-fn{font-weight:700;font-size:10px;margin-bottom:1px;}
+.sf-args{color:#8a9ab8;font-size:9px;}
+.sbase{text-align:center;font-size:8px;color:#b0bcd8;padding:4px;border-top:1px dashed var(--border);letter-spacing:1px;}
+/* ctrl bar */
+.ctrl-bar{display:flex;gap:5px;align-items:center;padding:5px 10px;background:#f8faff;border-top:1px solid var(--border);flex-shrink:0;}
+.bc{border-radius:5px;border:1.5px solid var(--border);background:#fff;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:3px 10px;cursor:pointer;transition:all .15s;}
+.bc:hover:not([disabled]){background:var(--acc);color:#fff;border-color:var(--acc);}
+.bc[disabled]{opacity:.3;cursor:not-allowed;}
+.bc-rst{border-color:#ef4444;color:#ef4444;padding:3px 7px;}
+.bc-rst:hover{background:#ef4444!important;color:#fff!important;border-color:#ef4444!important;}
+.zc{display:flex;align-items:center;gap:3px;}
+.bz{width:18px;height:18px;border-radius:3px;border:1px solid var(--border);background:#fff;color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.bz:hover{background:var(--border);}
+.zv{font-size:9px;color:var(--dim);min-width:28px;text-align:center;}
+.sbadge{margin-left:auto;font-size:9px;color:var(--dim);white-space:nowrap;}
+
+/* Fast-forward button */
+.bc-ff{background:#1d4ed8;color:#fff;border-color:#1d4ed8;padding:3px 8px;font-size:11px;}
+.bc-ff:hover:not([disabled]){background:#1e3a8a!important;border-color:#1e3a8a!important;color:#fff!important;}
+.bc-ff[disabled]{opacity:.3;cursor:not-allowed;}
+/* Console output bar */
+.console-out{
+  background:#0f172a;border-top:1px solid #1e293b;
+  padding:5px 12px 5px 10px;font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;flex-shrink:0;display:flex;align-items:flex-start;
+  gap:8px;min-height:28px;max-height:260px;overflow-y:auto;
+  position:relative;
+  resize:vertical; /* native CSS resize for supporting browsers */
+}
+.console-out::-webkit-scrollbar{width:3px;}
+.console-out::-webkit-scrollbar-thumb{background:#334155;}
+.console-prompt{color:#475569;font-weight:700;white-space:nowrap;padding-top:1px;}
+.console-text{color:#4ade80;white-space:pre-wrap;word-break:break-all;line-height:1.6;}
+.console-text.err{color:#f87171;}
+.console-text.dim{color:#94a3b8;}
+/* Vertical drag handle above console */
+.console-rh{
+  height:6px;background:#1e293b;border-top:1px solid #334155;cursor:row-resize;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;user-select:none;
+  transition:background .15s;
+}
+.console-rh:hover,.console-rh.drag{background:#2563eb44;}
+.console-rh::after{content:'';width:32px;height:2px;background:#334155;border-radius:2px;}
+.console-rh:hover::after,.console-rh.drag::after{background:#2563eb;}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-title">&#127794; <span>Binary Search Tree</span> Visualizer</div>
+  <div style="margin-left:auto;font-size:9px;color:#6b7fa8;letter-spacing:.05em;">C implementation · step-through · memory addresses</div>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab(0)">01 · Build BST</button>
+  <button class="tab-btn" onclick="switchTab(1)">02 · Search</button>
+  <button class="tab-btn" onclick="switchTab(2)">03 · Min &amp; Max</button>
+  <button class="tab-btn" onclick="switchTab(3)">04 · Predecessor</button>
+  <button class="tab-btn" onclick="switchTab(4)">05 · Successor</button>
+  <button class="tab-btn" onclick="switchTab(5)">06 · Delete</button>
+</div>
+
+<!-- TAB 0 BUILD -->
+<div class="tab-panel active" id="tab0">
+  <div class="cgrid g3" id="cgrid0">
+    <div class="panel" id="p0-0">
+      <div class="rh" data-g="0" data-c="0" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#2563eb"></span>Tree Visualization — Memory Layout</div>
+      <div style="background:#131f3a;border-bottom:1px solid var(--border);padding:6px 12px 0;flex-shrink:0;">
+        <!-- Row 1: custom input -->
+        <div style="display:flex;align-items:center;gap:7px;padding-bottom:6px;border-bottom:1px solid #1e3060;">
+          <label style="font-size:9px;color:#9dacc8;font-weight:700;letter-spacing:1px;white-space:nowrap;">CUSTOM KEYS:</label>
+          <input id="t0-custom-input" class="op-input" type="text" placeholder="e.g. 45, 22, 67, 11" style="width:180px;font-size:11px;"
+            onkeydown="if(event.key==='Enter')addBuildKey()"/>
+          <button class="xb xb-blue" onclick="addBuildKey()" style="padding:3px 10px;font-size:9px;">+ Add</button>
+          <button class="xb xb-gray" onclick="buildCustomTree()" style="padding:3px 10px;font-size:9px;">&#9654; Build</button>
+          <button class="xb xb-red" onclick="clearCustomKeys()" style="padding:3px 8px;font-size:9px;">&#10005;</button>
+          <div class="ex-sep"></div>
+          <div id="t0-chips" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:20px;flex:1;"></div>
+        </div>
+        <!-- Row 2: presets -->
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 0 4px;">
+          <label style="font-size:9px;color:#9dacc8;font-weight:700;letter-spacing:1px;white-space:nowrap;">PRESET:</label>
+          <button class="ex-btn" onclick="loadBuildPreset('balanced')" title="50,30,70,20,40,60,80">Balanced</button>
+          <button class="ex-btn" onclick="loadBuildPreset('unbalanced')" title="40,20,70,10,30,60,80,25">Unbalanced</button>
+          <button class="ex-btn" onclick="loadBuildPreset('skew-r')" title="10,20,30,40,50">Right Skew</button>
+          <button class="ex-btn" onclick="loadBuildPreset('skew-l')" title="50,40,30,20,10">Left Skew</button>
+          <div class="ex-sep"></div>
+          <span id="t0-preset-label" style="font-size:9px;color:#60a5fa;font-weight:700;letter-spacing:.04em;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">balanced [50,30,70,20,40,60,80]</span>
+        </div>
+      </div>
+      <div class="tree-wrap"><svg id="t0-svg"><g id="t0-lG"></g><g id="t0-nG"></g></svg></div>
+      <div class="cond-bar" id="t0-cond"></div>
+      <div class="info-bar" id="t0-info">Press <b>Next &#8594;</b> to step through the build. Tree starts empty.</div>
+    </div>
+    <div class="panel" id="p0-1">
+      <div class="rh" data-g="0" data-c="1" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>C Source — BST Insert</div>
+      <div class="code-scroll" id="t0-code">
+<div class="line cm" id="b0">#include &lt;stdio.h&gt;</div>
+<div class="line cm" id="b1">#include &lt;stdlib.h&gt;</div>
+<div class="divl"></div>
+<div class="line" id="b2"><span class="kw">typedef struct</span> Node {</div>
+<div class="line" id="b3">  <span class="kw">int</span> data;</div>
+<div class="line" id="b4">  <span class="kw">struct</span> Node *left;</div>
+<div class="line" id="b5">  <span class="kw">struct</span> Node *right;</div>
+<div class="line" id="b6">} Node;</div>
+<div class="divl"></div>
+<div class="line" id="b7">Node* <span class="fn">createNode</span>(<span class="kw">int</span> v) {</div>
+<div class="line" id="b8">  Node *n = <span class="fn">malloc</span>(<span class="kw">sizeof</span>(Node));</div>
+<div class="line" id="b9">  n-&gt;data  = v;</div>
+<div class="line" id="b10">  n-&gt;left  = <span class="num">NULL</span>;</div>
+<div class="line" id="b11">  n-&gt;right = <span class="num">NULL</span>;</div>
+<div class="line" id="b12">  <span class="kw">return</span> n;</div>
+<div class="line" id="b13">}</div>
+<div class="divl"></div>
+<div class="line" id="b14">Node* <span class="fn">insert</span>(Node *r, <span class="kw">int</span> v) {</div>
+<div class="line" id="b15">  <span class="kw">if</span> (r == <span class="num">NULL</span>)            <span class="cm">// empty slot</span></div>
+<div class="line" id="b16">    <span class="kw">return</span> <span class="fn">createNode</span>(v);</div>
+<div class="line" id="b17">  <span class="kw">if</span> (v &lt; r-&gt;data)</div>
+<div class="line" id="b18">    r-&gt;left  = <span class="fn">insert</span>(r-&gt;left,  v);</div>
+<div class="line" id="b19">  <span class="kw">else if</span> (v &gt; r-&gt;data)</div>
+<div class="line" id="b20">    r-&gt;right = <span class="fn">insert</span>(r-&gt;right, v);</div>
+<div class="line" id="b21">  <span class="kw">return</span> r;</div>
+<div class="line" id="b22">}</div>
+<div class="divl"></div>
+<div class="line" id="b23"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="b24">  Node *root = <span class="num">NULL</span>;</div>
+<div class="line" id="b25">  root = <span class="fn">insert</span>(root, <span class="num">50</span>);</div>
+<div class="line" id="b26">  root = <span class="fn">insert</span>(root, <span class="num">30</span>);</div>
+<div class="line" id="b27">  root = <span class="fn">insert</span>(root, <span class="num">70</span>);</div>
+<div class="line" id="b28">  root = <span class="fn">insert</span>(root, <span class="num">20</span>);</div>
+<div class="line" id="b29">  root = <span class="fn">insert</span>(root, <span class="num">40</span>);</div>
+<div class="line" id="b30">  root = <span class="fn">insert</span>(root, <span class="num">60</span>);</div>
+<div class="line" id="b31">  root = <span class="fn">insert</span>(root, <span class="num">80</span>);</div>
+<div class="line" id="b32">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="b33">}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="plabel"><span class="dot" style="background:#db2777"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">&#9650; TOP</span></div>
+      <div class="stack-wrap" id="t0-stack"><div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div></div>
+      <div class="sbase">&#9644; STACK BASE &#9644;</div>
+      <div class="ctrl-bar">
+        <button class="bc bc-rst" onclick="resetOp(0)">&#8635;</button>
+        <button class="bc" id="t0-pb" onclick="prevStep(0)" disabled>&#8592; Prev</button>
+        <button class="bc" id="t0-nb" onclick="nextStep(0)">Next &#8594;</button>
+        <button class="bc bc-ff" id="t0-ff" onclick="ffStep(0)" disabled title="Fast-forward to end">&#9654;&#9654;</button>
+        <div class="zc"><button class="bz" onclick="zoomCode(0,-.1)">&#8722;</button><span class="zv" id="t0-zv">100%</span><button class="bz" onclick="zoomCode(0,.1)">+</button></div>
+        <div class="sbadge">Step <b id="t0-sn">1</b>/<b id="t0-st">1</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- TAB 1 SEARCH -->
+<div class="tab-panel" id="tab1">
+  <div class="cgrid g3" id="cgrid1">
+    <div class="panel" id="p1-0">
+      <div class="rh" data-g="1" data-c="0" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#059669"></span>Tree Visualization</div>
+      <div class="op-bar">
+        <label>SEARCH KEY</label>
+        <input class="op-input" id="srch-val" type="number" value="40"/>
+        <button class="xb xb-green" onclick="opSearch()">&#9654; Search</button>
+        <div class="ex-sep"></div>
+        <button class="ex-btn" style="background:#1e3a20;border-color:#16a34a;color:#86efac;" onclick="useBuiltTree(1)" title="Use the tree you built in Tab 01">&#127794; Use Tab 01 tree</button>
+        <div class="ex-sep"></div>
+        <label>TREE:</label>
+        <button class="ex-btn" onclick="loadSearchTree('balanced')">Balanced</button>
+        <button class="ex-btn" onclick="loadSearchTree('unbalanced')">Unbalanced</button>
+        <button class="ex-btn" onclick="loadSearchTree('skew-r')">Right Skew</button>
+        <button class="ex-btn" onclick="loadSearchTree('skew-l')">Left Skew</button>
+      </div>
+      <div class="tree-wrap"><svg id="t1-svg"><g id="t1-lG"></g><g id="t1-nG"></g></svg></div>
+      <div class="cond-bar" id="t1-cond"></div>
+      <div class="info-bar" id="t1-info">Choose a tree type, enter a key, then press Search.</div>
+    </div>
+    <div class="panel" id="p1-1">
+      <div class="rh" data-g="1" data-c="1" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>C Source — search()</div>
+      <div class="code-scroll" id="t1-code">
+<div class="line" id="s0">Node* <span class="fn">search</span>(Node *r, <span class="kw">int</span> key) {</div>
+<div class="line" id="s1">  <span class="kw">if</span> (r == <span class="num">NULL</span>)           <span class="cm">// not found</span></div>
+<div class="line" id="s2">    <span class="kw">return</span> <span class="num">NULL</span>;</div>
+<div class="line" id="s3">  <span class="kw">if</span> (key == r-&gt;data)     <span class="cm">// found!</span></div>
+<div class="line" id="s4">    <span class="kw">return</span> r;</div>
+<div class="line" id="s5">  <span class="kw">if</span> (key &lt; r-&gt;data)      <span class="cm">// go left</span></div>
+<div class="line" id="s6">    <span class="kw">return</span> <span class="fn">search</span>(r-&gt;left, key);</div>
+<div class="line" id="s7">  <span class="kw">return</span> <span class="fn">search</span>(r-&gt;right, key);</div>
+<div class="line" id="s8">}</div>
+<div class="divl"></div>
+<div class="line" id="s9"><span class="cm">/* Complexity:</span></div>
+<div class="line" id="s10"><span class="cm">   Best:  O(1)     — root match</span></div>
+<div class="line" id="s11"><span class="cm">   Avg:   O(log n) — balanced</span></div>
+<div class="line" id="s12"><span class="cm">   Worst: O(n)     — skewed    */</span></div>
+<div class="divl"></div>
+<div class="line" id="s13"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="s14">  <span class="cm">/* ...build tree... */</span></div>
+<div class="line" id="s15">  Node *r = <span class="fn">search</span>(root, <span class="num" id="s-kd">40</span>);</div>
+<div class="line" id="s16">  <span class="kw">if</span> (r) <span class="fn">printf</span>(<span class="str">"Found %d\n"</span>, r-&gt;data);</div>
+<div class="line" id="s17">  <span class="kw">else</span>   <span class="fn">printf</span>(<span class="str">"Not found\n"</span>);</div>
+<div class="line" id="s18">}</div>
+      </div>
+      <div class="console-rh" data-console="t1-console"></div>
+      <div class="console-out" id="t1-console"><span class="console-prompt">$</span><span class="console-text dim" id="t1-cout">— run search to see output —</span></div>
+    </div>
+    <div class="panel">
+      <div class="plabel"><span class="dot" style="background:#059669"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">&#9650; TOP</span></div>
+      <div class="stack-wrap" id="t1-stack"><div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div></div>
+      <div class="sbase">&#9644; STACK BASE &#9644;</div>
+      <div class="ctrl-bar">
+        <button class="bc bc-rst" onclick="resetOp(1)">&#8635;</button>
+        <button class="bc" id="t1-pb" onclick="prevStep(1)" disabled>&#8592; Prev</button>
+        <button class="bc" id="t1-nb" onclick="nextStep(1)" disabled>Next &#8594;</button>
+        <button class="bc bc-ff" id="t1-ff" onclick="ffStep(1)" disabled title="Fast-forward to end">&#9654;&#9654;</button>
+        <div class="zc"><button class="bz" onclick="zoomCode(1,-.1)">&#8722;</button><span class="zv" id="t1-zv">100%</span><button class="bz" onclick="zoomCode(1,.1)">+</button></div>
+        <div class="sbadge">Step <b id="t1-sn">0</b>/<b id="t1-st">0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 MIN MAX -->
+<div class="tab-panel" id="tab2">
+  <div class="cgrid g3" id="cgrid2">
+    <div class="panel" id="p2-0">
+      <div class="rh" data-g="2" data-c="0" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#d97706"></span>Tree Visualization</div>
+      <div class="op-bar">
+        <button class="xb xb-amber" onclick="opMinMax('min')">&#9654; Find Min</button>
+        <button class="xb xb-amber" style="background:#b45309" onclick="opMinMax('max')">&#9654; Find Max</button>
+        <div class="ex-sep"></div>
+        <button class="ex-btn" style="background:#1e3a20;border-color:#16a34a;color:#86efac;" onclick="useBuiltTree(2)" title="Use the tree you built in Tab 01">&#127794; Use Tab 01 tree</button>
+        <div class="ex-sep"></div>
+        <label>TREE:</label>
+        <button class="ex-btn" onclick="loadMMTree('balanced')">Balanced</button>
+        <button class="ex-btn" onclick="loadMMTree('unbalanced')">Unbalanced</button>
+        <button class="ex-btn" onclick="loadMMTree('skew-r')">Right Skew</button>
+        <button class="ex-btn" onclick="loadMMTree('skew-l')">Left Skew</button>
+      </div>
+      <div class="tree-wrap"><svg id="t2-svg"><g id="t2-lG"></g><g id="t2-nG"></g></svg></div>
+      <div class="cond-bar" id="t2-cond"></div>
+      <div class="info-bar" id="t2-info">Min = leftmost node &nbsp;|&nbsp; Max = rightmost node. Time: O(h).</div>
+    </div>
+    <div class="panel" id="p2-1">
+      <div class="rh" data-g="2" data-c="1" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>C Source — findMin() / findMax()</div>
+      <div class="code-scroll" id="t2-code">
+<div class="line" id="m0">Node* <span class="fn">findMin</span>(Node *r) {</div>
+<div class="line" id="m1">  <span class="kw">if</span> (r == <span class="num">NULL</span>) <span class="kw">return</span> <span class="num">NULL</span>;</div>
+<div class="line" id="m2">  <span class="kw">while</span> (r-&gt;left != <span class="num">NULL</span>)</div>
+<div class="line" id="m3">    r = r-&gt;left;</div>
+<div class="line" id="m4">  <span class="kw">return</span> r;   <span class="cm">// leftmost</span></div>
+<div class="line" id="m5">}</div>
+<div class="divl"></div>
+<div class="line" id="m6">Node* <span class="fn">findMax</span>(Node *r) {</div>
+<div class="line" id="m7">  <span class="kw">if</span> (r == <span class="num">NULL</span>) <span class="kw">return</span> <span class="num">NULL</span>;</div>
+<div class="line" id="m8">  <span class="kw">while</span> (r-&gt;right != <span class="num">NULL</span>)</div>
+<div class="line" id="m9">    r = r-&gt;right;</div>
+<div class="line" id="m10">  <span class="kw">return</span> r;   <span class="cm">// rightmost</span></div>
+<div class="line" id="m11">}</div>
+<div class="divl"></div>
+<div class="line" id="m12"><span class="cm">/* Min: leftmost (no left child) */</span></div>
+<div class="line" id="m13"><span class="cm">/* Max: rightmost (no right child)*/</span></div>
+<div class="line" id="m14"><span class="cm">/* Time: O(h), h = tree height   */</span></div>
+<div class="divl"></div>
+<div class="line" id="m-main1"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="m-main2">  <span class="cm">/* ...build tree... */</span></div>
+<div class="line" id="m-main3">  Node *mn = <span class="fn">findMin</span>(root);</div>
+<div class="line" id="m-main4">  Node *mx = <span class="fn">findMax</span>(root);</div>
+<div class="line" id="m-main5">  <span class="fn">printf</span>(<span class="str">"Min = %d\n"</span>, mn-&gt;data);</div>
+<div class="line" id="m-main6">  <span class="fn">printf</span>(<span class="str">"Max = %d\n"</span>, mx-&gt;data);</div>
+<div class="line" id="m-main7">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="m-main8">}</div>
+      </div>
+      <div class="console-rh" data-console="t2-console"></div>
+      <div class="console-out" id="t2-console"><span class="console-prompt">$</span><span class="console-text dim" id="t2-cout">— run findMin / findMax to see output —</span></div>
+    </div>
+    <div class="panel">
+      <div class="plabel"><span class="dot" style="background:#d97706"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">&#9650; TOP</span></div>
+      <div class="stack-wrap" id="t2-stack"><div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div></div>
+      <div class="sbase">&#9644; STACK BASE &#9644;</div>
+      <div class="ctrl-bar">
+        <button class="bc bc-rst" onclick="resetOp(2)">&#8635;</button>
+        <button class="bc" id="t2-pb" onclick="prevStep(2)" disabled>&#8592; Prev</button>
+        <button class="bc" id="t2-nb" onclick="nextStep(2)" disabled>Next &#8594;</button>
+        <button class="bc bc-ff" id="t2-ff" onclick="ffStep(2)" disabled title="Fast-forward to end">&#9654;&#9654;</button>
+        <div class="zc"><button class="bz" onclick="zoomCode(2,-.1)">&#8722;</button><span class="zv" id="t2-zv">100%</span><button class="bz" onclick="zoomCode(2,.1)">+</button></div>
+        <div class="sbadge">Step <b id="t2-sn">0</b>/<b id="t2-st">0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3 PREDECESSOR -->
+<div class="tab-panel" id="tab3">
+  <div class="cgrid g3" id="cgrid3">
+    <div class="panel" id="p3-0">
+      <div class="rh" data-g="3" data-c="0" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>Tree Visualization</div>
+      <div class="op-bar">
+        <label>KEY</label>
+        <input class="op-input" id="pred-val" type="number" value="50"/>
+        <button class="xb xb-purple" onclick="opPred()">&#9654; Predecessor</button>
+        <div class="ex-sep"></div>
+        <button class="ex-btn" style="background:#1e3a20;border-color:#16a34a;color:#86efac;" onclick="useBuiltTree(3)" title="Use the tree you built in Tab 01">&#127794; Use Tab 01 tree</button>
+        <div class="ex-sep"></div>
+        <label>EXAMPLE:</label>
+        <button class="ex-btn" onclick="loadPredTree('left-sub')" title="Pred in left subtree">Left subtree</button>
+        <button class="ex-btn" onclick="loadPredTree('ancestor')" title="Pred is ancestor">Ancestor</button>
+        <button class="ex-btn" onclick="loadPredTree('is-min')" title="Key is minimum">Is Min</button>
+      </div>
+      <div class="tree-wrap"><svg id="t3-svg"><g id="t3-lG"></g><g id="t3-nG"></g></svg></div>
+      <div class="cond-bar" id="t3-cond"></div>
+      <div class="info-bar" id="t3-info">Predecessor = largest value smaller than key. Two cases: left subtree or ancestor.</div>
+    </div>
+    <div class="panel" id="p3-1">
+      <div class="rh" data-g="3" data-c="1" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>C Source — predecessor()</div>
+      <div class="code-scroll" id="t3-code">
+<div class="line" id="p0">Node* <span class="fn">predecessor</span>(Node *r, <span class="kw">int</span> key) {</div>
+<div class="line" id="p1">  Node *pred = <span class="num">NULL</span>;</div>
+<div class="line" id="p2">  <span class="kw">while</span> (r != <span class="num">NULL</span>) {</div>
+<div class="line" id="p3">    <span class="kw">if</span> (key == r-&gt;data) <span class="kw">break</span>;</div>
+<div class="line" id="p4">    <span class="kw">if</span> (key &lt; r-&gt;data)</div>
+<div class="line" id="p5">      r = r-&gt;left;</div>
+<div class="line" id="p6">    <span class="kw">else</span> {</div>
+<div class="line" id="p7">      pred = r;         <span class="cm">// candidate</span></div>
+<div class="line" id="p8">      r = r-&gt;right;</div>
+<div class="line" id="p9">    }</div>
+<div class="line" id="p10">  }</div>
+<div class="line" id="p11">  <span class="kw">if</span> (r &amp;&amp; r-&gt;left)    <span class="cm">// has left subtree</span></div>
+<div class="line" id="p12">    <span class="kw">return</span> <span class="fn">findMax</span>(r-&gt;left);</div>
+<div class="line" id="p13">  <span class="kw">return</span> pred;</div>
+<div class="line" id="p14">}</div>
+<div class="divl"></div>
+<div class="line" id="p15"><span class="cm">/* Case 1: key has left subtree</span></div>
+<div class="line" id="p16"><span class="cm">   → pred = findMax(left)</span></div>
+<div class="line" id="p17"><span class="cm">   Case 2: no left subtree</span></div>
+<div class="line" id="p18"><span class="cm">   → pred = deepest ancestor</span></div>
+<div class="line" id="p19"><span class="cm">       where we went right      */</span></div>
+<div class="divl"></div>
+<div class="line" id="p-main1"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="p-main2">  <span class="cm">/* ...build tree... */</span></div>
+<div class="line" id="p-main3">  Node *pr = <span class="fn">predecessor</span>(root, <span class="num" id="p-kd">40</span>);</div>
+<div class="line" id="p-main4">  <span class="kw">if</span> (pr)</div>
+<div class="line" id="p-main5">    <span class="fn">printf</span>(<span class="str">"Predecessor = %d\n"</span>, pr-&gt;data);</div>
+<div class="line" id="p-main6">  <span class="kw">else</span></div>
+<div class="line" id="p-main7">    <span class="fn">printf</span>(<span class="str">"No predecessor\n"</span>);</div>
+<div class="line" id="p-main8">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="p-main9">}</div>
+      </div>
+      <div class="console-rh" data-console="t3-console"></div>
+      <div class="console-out" id="t3-console"><span class="console-prompt">$</span><span class="console-text dim" id="t3-cout">— run predecessor to see output —</span></div>
+    </div>
+    <div class="panel">
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">&#9650; TOP</span></div>
+      <div class="stack-wrap" id="t3-stack"><div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div></div>
+      <div class="sbase">&#9644; STACK BASE &#9644;</div>
+      <div class="ctrl-bar">
+        <button class="bc bc-rst" onclick="resetOp(3)">&#8635;</button>
+        <button class="bc" id="t3-pb" onclick="prevStep(3)" disabled>&#8592; Prev</button>
+        <button class="bc" id="t3-nb" onclick="nextStep(3)" disabled>Next &#8594;</button>
+        <button class="bc bc-ff" id="t3-ff" onclick="ffStep(3)" disabled title="Fast-forward to end">&#9654;&#9654;</button>
+        <div class="zc"><button class="bz" onclick="zoomCode(3,-.1)">&#8722;</button><span class="zv" id="t3-zv">100%</span><button class="bz" onclick="zoomCode(3,.1)">+</button></div>
+        <div class="sbadge">Step <b id="t3-sn">0</b>/<b id="t3-st">0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4 SUCCESSOR -->
+<div class="tab-panel" id="tab4">
+  <div class="cgrid g3" id="cgrid4">
+    <div class="panel" id="p4-0">
+      <div class="rh" data-g="4" data-c="0" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#0d9488"></span>Tree Visualization</div>
+      <div class="op-bar">
+        <label>KEY</label>
+        <input class="op-input" id="succ-val" type="number" value="50"/>
+        <button class="xb xb-teal" onclick="opSucc()">&#9654; Successor</button>
+        <div class="ex-sep"></div>
+        <button class="ex-btn" style="background:#1e3a20;border-color:#16a34a;color:#86efac;" onclick="useBuiltTree(4)" title="Use the tree you built in Tab 01">&#127794; Use Tab 01 tree</button>
+        <div class="ex-sep"></div>
+        <label>EXAMPLE:</label>
+        <button class="ex-btn" onclick="loadSuccTree('right-sub')" title="Succ in right subtree">Right subtree</button>
+        <button class="ex-btn" onclick="loadSuccTree('ancestor')" title="Succ is ancestor">Ancestor</button>
+        <button class="ex-btn" onclick="loadSuccTree('is-max')" title="Key is maximum">Is Max</button>
+      </div>
+      <div class="tree-wrap"><svg id="t4-svg"><g id="t4-lG"></g><g id="t4-nG"></g></svg></div>
+      <div class="cond-bar" id="t4-cond"></div>
+      <div class="info-bar" id="t4-info">Successor = smallest value larger than key. Two cases: right subtree or ancestor.</div>
+    </div>
+    <div class="panel" id="p4-1">
+      <div class="rh" data-g="4" data-c="1" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>C Source — successor()</div>
+      <div class="code-scroll" id="t4-code">
+<div class="line" id="u0">Node* <span class="fn">successor</span>(Node *r, <span class="kw">int</span> key) {</div>
+<div class="line" id="u1">  Node *succ = <span class="num">NULL</span>;</div>
+<div class="line" id="u2">  <span class="kw">while</span> (r != <span class="num">NULL</span>) {</div>
+<div class="line" id="u3">    <span class="kw">if</span> (key == r-&gt;data) <span class="kw">break</span>;</div>
+<div class="line" id="u4">    <span class="kw">if</span> (key &lt; r-&gt;data) {</div>
+<div class="line" id="u5">      succ = r;         <span class="cm">// candidate</span></div>
+<div class="line" id="u6">      r = r-&gt;left;</div>
+<div class="line" id="u7">    } <span class="kw">else</span></div>
+<div class="line" id="u8">      r = r-&gt;right;</div>
+<div class="line" id="u9">  }</div>
+<div class="line" id="u10">  <span class="kw">if</span> (r &amp;&amp; r-&gt;right)   <span class="cm">// has right subtree</span></div>
+<div class="line" id="u11">    <span class="kw">return</span> <span class="fn">findMin</span>(r-&gt;right);</div>
+<div class="line" id="u12">  <span class="kw">return</span> succ;</div>
+<div class="line" id="u13">}</div>
+<div class="divl"></div>
+<div class="line" id="u14"><span class="cm">/* Case 1: key has right subtree</span></div>
+<div class="line" id="u15"><span class="cm">   → succ = findMin(right)</span></div>
+<div class="line" id="u16"><span class="cm">   Case 2: no right subtree</span></div>
+<div class="line" id="u17"><span class="cm">   → succ = deepest ancestor</span></div>
+<div class="line" id="u18"><span class="cm">       where we went left       */</span></div>
+<div class="divl"></div>
+<div class="line" id="u-main1"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="u-main2">  <span class="cm">/* ...build tree... */</span></div>
+<div class="line" id="u-main3">  Node *sc = <span class="fn">successor</span>(root, <span class="num" id="u-kd">40</span>);</div>
+<div class="line" id="u-main4">  <span class="kw">if</span> (sc)</div>
+<div class="line" id="u-main5">    <span class="fn">printf</span>(<span class="str">"Successor = %d\n"</span>, sc-&gt;data);</div>
+<div class="line" id="u-main6">  <span class="kw">else</span></div>
+<div class="line" id="u-main7">    <span class="fn">printf</span>(<span class="str">"No successor\n"</span>);</div>
+<div class="line" id="u-main8">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="u-main9">}</div>
+      </div>
+      <div class="console-rh" data-console="t4-console"></div>
+      <div class="console-out" id="t4-console"><span class="console-prompt">$</span><span class="console-text dim" id="t4-cout">— run successor to see output —</span></div>
+    </div>
+    <div class="panel">
+      <div class="plabel"><span class="dot" style="background:#0d9488"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">&#9650; TOP</span></div>
+      <div class="stack-wrap" id="t4-stack"><div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div></div>
+      <div class="sbase">&#9644; STACK BASE &#9644;</div>
+      <div class="ctrl-bar">
+        <button class="bc bc-rst" onclick="resetOp(4)">&#8635;</button>
+        <button class="bc" id="t4-pb" onclick="prevStep(4)" disabled>&#8592; Prev</button>
+        <button class="bc" id="t4-nb" onclick="nextStep(4)" disabled>Next &#8594;</button>
+        <button class="bc bc-ff" id="t4-ff" onclick="ffStep(4)" disabled title="Fast-forward to end">&#9654;&#9654;</button>
+        <div class="zc"><button class="bz" onclick="zoomCode(4,-.1)">&#8722;</button><span class="zv" id="t4-zv">100%</span><button class="bz" onclick="zoomCode(4,.1)">+</button></div>
+        <div class="sbadge">Step <b id="t4-sn">0</b>/<b id="t4-st">0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 5 DELETE -->
+<div class="tab-panel" id="tab5">
+  <div class="cgrid g3" id="cgrid5">
+    <div class="panel" id="p5-0">
+      <div class="rh" data-g="5" data-c="0" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#dc2626"></span>Tree Visualization</div>
+      <div class="op-bar">
+        <label>DELETE KEY</label>
+        <input class="op-input" id="del-val" type="number" value="20"/>
+        <button class="xb xb-red" onclick="opDelete()">&#9654; Delete</button>
+        <div class="ex-sep"></div>
+        <button class="ex-btn" style="background:#1e3a20;border-color:#16a34a;color:#86efac;" onclick="useBuiltTree(5)" title="Use the tree you built in Tab 01">&#127794; Use Tab 01 tree</button>
+        <div class="ex-sep"></div>
+        <label>CASE:</label>
+        <button class="ex-btn" onclick="loadDelTree('leaf')" title="Delete a leaf node">Leaf</button>
+        <button class="ex-btn" onclick="loadDelTree('one-child')" title="Delete node with 1 child">One child</button>
+        <button class="ex-btn" onclick="loadDelTree('two-child')" title="Delete node with 2 children">Two children</button>
+      </div>
+      <div class="tree-wrap"><svg id="t5-svg"><g id="t5-lG"></g><g id="t5-nG"></g></svg></div>
+      <div class="cond-bar" id="t5-cond"></div>
+      <div class="info-bar" id="t5-info">Choose a case example. Three delete cases: leaf, one child, two children.</div>
+    </div>
+    <div class="panel" id="p5-1">
+      <div class="rh" data-g="5" data-c="1" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:10;"></div>
+      <div class="plabel"><span class="dot" style="background:#7c3aed"></span>C Source — deleteNode()</div>
+      <div class="code-scroll" id="t5-code">
+<div class="line" id="d0">Node* <span class="fn">deleteNode</span>(Node *r, <span class="kw">int</span> key) {</div>
+<div class="line" id="d1">  <span class="kw">if</span> (r == <span class="num">NULL</span>) <span class="kw">return</span> <span class="num">NULL</span>;</div>
+<div class="line" id="d2">  <span class="kw">if</span> (key &lt; r-&gt;data)</div>
+<div class="line" id="d3">    r-&gt;left  = <span class="fn">deleteNode</span>(r-&gt;left, key);</div>
+<div class="line" id="d4">  <span class="kw">else if</span> (key &gt; r-&gt;data)</div>
+<div class="line" id="d5">    r-&gt;right = <span class="fn">deleteNode</span>(r-&gt;right, key);</div>
+<div class="line" id="d6">  <span class="kw">else</span> {                      <span class="cm">// found!</span></div>
+<div class="line" id="d7">    <span class="cm">/* Case 1: leaf */</span></div>
+<div class="line" id="d8">    <span class="kw">if</span> (!r-&gt;left &amp;&amp; !r-&gt;right) {</div>
+<div class="line" id="d9">      <span class="fn">free</span>(r); <span class="kw">return</span> <span class="num">NULL</span>;</div>
+<div class="line" id="d10">    }</div>
+<div class="line" id="d11">    <span class="cm">/* Case 2a: no left child */</span></div>
+<div class="line" id="d12">    <span class="kw">if</span> (!r-&gt;left) {</div>
+<div class="line" id="d13">      Node *t=r-&gt;right; <span class="fn">free</span>(r); <span class="kw">return</span> t;</div>
+<div class="line" id="d14">    }</div>
+<div class="line" id="d15">    <span class="cm">/* Case 2b: no right child */</span></div>
+<div class="line" id="d16">    <span class="kw">if</span> (!r-&gt;right) {</div>
+<div class="line" id="d17">      Node *t=r-&gt;left; <span class="fn">free</span>(r); <span class="kw">return</span> t;</div>
+<div class="line" id="d18">    }</div>
+<div class="line" id="d19">    <span class="cm">/* Case 3: two children */</span></div>
+<div class="line" id="d20">    Node *s = <span class="fn">findMin</span>(r-&gt;right);</div>
+<div class="line" id="d21">    r-&gt;data  = s-&gt;data;         <span class="cm">// copy succ</span></div>
+<div class="line" id="d22">    r-&gt;right = <span class="fn">deleteNode</span>(r-&gt;right, s-&gt;data);</div>
+<div class="line" id="d23">  }</div>
+<div class="line" id="d24">  <span class="kw">return</span> r;</div>
+<div class="line" id="d25">}</div>
+<div class="divl"></div>
+<div class="line" id="d-main1"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="d-main2">  <span class="cm">/* ...build tree... */</span></div>
+<div class="line" id="d-main3">  root = <span class="fn">deleteNode</span>(root, <span class="num" id="d-kd">20</span>);</div>
+<div class="line" id="d-main4">  <span class="fn">printf</span>(<span class="str">"Node %d deleted\n"</span>, <span class="num" id="d-kd2">20</span>);</div>
+<div class="line" id="d-main5">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="d-main6">}</div>
+      </div>
+      <div class="console-rh" data-console="t5-console"></div>
+      <div class="console-out" id="t5-console"><span class="console-prompt">$</span><span class="console-text dim" id="t5-cout">— run deleteNode to see output —</span></div>
+    </div>
+    <div class="panel">
+      <div class="plabel"><span class="dot" style="background:#dc2626"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">&#9650; TOP</span></div>
+      <div class="stack-wrap" id="t5-stack"><div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div></div>
+      <div class="sbase">&#9644; STACK BASE &#9644;</div>
+      <div class="ctrl-bar">
+        <button class="bc bc-rst" onclick="resetOp(5)">&#8635;</button>
+        <button class="bc" id="t5-pb" onclick="prevStep(5)" disabled>&#8592; Prev</button>
+        <button class="bc" id="t5-nb" onclick="nextStep(5)" disabled>Next &#8594;</button>
+        <button class="bc bc-ff" id="t5-ff" onclick="ffStep(5)" disabled title="Fast-forward to end">&#9654;&#9654;</button>
+        <div class="zc"><button class="bz" onclick="zoomCode(5,-.1)">&#8722;</button><span class="zv" id="t5-zv">100%</span><button class="bz" onclick="zoomCode(5,.1)">+</button></div>
+        <div class="sbadge">Step <b id="t5-sn">0</b>/<b id="t5-st">0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════
+// ADDRESS POOL
+// ═══════════════════════════════════════════════════════════════
+var ADDR_POOL = {};
+function getAddr(key) {
+  if (!ADDR_POOL[key]) {
+    ADDR_POOL[key] = '0x' + (0x1000 + Math.floor(Math.random() * 0xEFFF)).toString(16).toUpperCase().padStart(4,'0');
+  }
+  return ADDR_POOL[key];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BST NODE CLASS
+// ═══════════════════════════════════════════════════════════════
+function TNode(key, x, y) {
+  this.key   = key;
+  this.x     = x || 0;
+  this.y     = y || 0;
+  this.left  = null;
+  this.right = null;
+  this.addr  = getAddr(key);
+}
+TNode.prototype.clone = function() {
+  var n  = new TNode(this.key, this.x, this.y);
+  n.addr = this.addr;
+  n.left  = this.left  ? this.left.clone()  : null;
+  n.right = this.right ? this.right.clone() : null;
+  return n;
+};
+
+// ═══════════════════════════════════════════════════════════════
+// LAYOUT ENGINE
+// ═══════════════════════════════════════════════════════════════
+var NW = 84, NH = 50, HGAP = 20, VGAP = 70;
+
+function layoutTree(root) {
+  if (!root) return;
+  var order = [], ranks = {}, depths = {};
+  function setD(n, d) { if (!n) return; depths[n.key] = d; setD(n.left, d+1); setD(n.right, d+1); }
+  var r = 0;
+  function setR(n) { if (!n) return; setR(n.left); ranks[n.key] = r++; setR(n.right); }
+  setD(root, 0); setR(root);
+  var n = r, maxD = 0;
+  for (var k in depths) if (depths[k] > maxD) maxD = depths[k];
+  var W = 680, hGap = Math.max(NW + HGAP, (W - NW) / (n + 1));
+  var vGap = Math.max(NH + VGAP, 340 / (maxD + 2));
+  function setXY(node) {
+    if (!node) return;
+    node.x = NW/2 + ranks[node.key] * hGap + hGap/2;
+    node.y = NH/2 + depths[node.key] * vGap + 30;
+    setXY(node.left); setXY(node.right);
+  }
+  setXY(root);
+}
+
+function bstInsert(root, key) {
+  if (!root) return new TNode(key);
+  if (key < root.key) root.left  = bstInsert(root.left,  key);
+  else if (key > root.key) root.right = bstInsert(root.right, key);
+  return root;
+}
+function buildBST(keys) {
+  var root = null;
+  keys.forEach(function(k) { root = bstInsert(root, k); });
+  layoutTree(root);
+  return root;
+}
+function bstDelete(root, key) {
+  if (!root) return null;
+  if (key < root.key) { root.left  = bstDelete(root.left,  key); }
+  else if (key > root.key) { root.right = bstDelete(root.right, key); }
+  else {
+    if (!root.left && !root.right) return null;
+    if (!root.left)  return root.right;
+    if (!root.right) return root.left;
+    var s = root.right; while (s.left) s = s.left;
+    root.key = s.key; root.addr = s.addr;
+    root.right = bstDelete(root.right, s.key);
+  }
+  return root;
+}
+function findMin(n) { while (n && n.left) n = n.left; return n; }
+function findMax(n) { while (n && n.right) n = n.right; return n; }
+
+// ═══════════════════════════════════════════════════════════════
+// PRESET TREES
+// ═══════════════════════════════════════════════════════════════
+var PRESETS = {
+  'balanced':  [50,30,70,20,40,60,80],
+  'unbalanced':[40,20,70,10,30,60,80,25],
+  'skew-r':    [10,20,30,40,50],
+  'skew-l':    [50,40,30,20,10],
+  // pred/succ scenarios
+  'left-sub':  [50,30,70,20,40,60,80,35,45],  // pred of 50 is in left subtree
+  'ancestor':  [50,30,70,60,80],               // pred of 60 is ancestor (50)
+  'is-min':    [50,30,70,20,40],               // pred of 20 is none (min)
+  'right-sub': [50,30,70,20,40,60,80,55,65],  // succ of 50 is in right subtree
+  'is-max':    [50,30,70,20,40,60],            // succ of 70 is none (max)
+  // delete cases
+  'leaf':      [50,30,70,20,40,60,80],
+  'one-child': [50,30,70,20,60,80],            // 30 has only left child
+  'two-child': [50,30,70,20,40,60,80,35,45],  // 30 has two children
+};
+var DEFAULT_KEYS = {
+  'search-balanced':'40','search-unbalanced':'25','search-skew-r':'30','search-skew-l':'30',
+  'search-default':'40'
+};
+var DEL_PRESET_KEY = {'leaf':'20','one-child':'30','two-child':'30'};
+var PRED_PRESET_KEY = {'left-sub':'50','ancestor':'60','is-min':'20'};
+var SUCC_PRESET_KEY = {'right-sub':'50','ancestor':'40','is-max':'70'};
+
+// ═══════════════════════════════════════════════════════════════
+// DRAW ENGINE — box nodes with address
+// ═══════════════════════════════════════════════════════════════
+var COLORS = {
+  normal:  { fill:'#ffffff', stroke:'#d0d9ee', sw:'1',   textFill:'#1e2a45' },
+  active:  { fill:'#eff6ff', stroke:'#2563eb', sw:'2',   textFill:'#1d4ed8' },
+  found:   { fill:'#f0fdf4', stroke:'#16a34a', sw:'2',   textFill:'#15803d' },
+  deleted: { fill:'#fef2f2', stroke:'#dc2626', sw:'2',   textFill:'#dc2626' },
+  pred:    { fill:'#f5f3ff', stroke:'#7c3aed', sw:'2',   textFill:'#6d28d9' },
+  succ:    { fill:'#f0fdfa', stroke:'#0d9488', sw:'2',   textFill:'#0f766e' },
+  minmax:  { fill:'#fffbeb', stroke:'#d97706', sw:'2',   textFill:'#92400e' },
+  path:    { fill:'#f0f9ff', stroke:'#0284c7', sw:'1.5', textFill:'#0369a1' },
+  target:  { fill:'#fef9c3', stroke:'#ca8a04', sw:'2',   textFill:'#713f12' },
+};
+
+function drawNode(ns, node, state, gEl) {
+  var c = COLORS[state] || COLORS.normal;
+  var rx = node.x - NW/2, ry = node.y - NH/2;
+
+  // address label above
+  var atx = document.createElementNS(ns,'text');
+  atx.setAttribute('x', node.x); atx.setAttribute('y', ry - 7);
+  atx.setAttribute('text-anchor','middle'); atx.setAttribute('font-size','8');
+  atx.setAttribute('font-weight','700'); atx.setAttribute('font-family','monospace');
+  atx.setAttribute('fill', state !== 'normal' ? c.stroke : '#9dacc8');
+  atx.textContent = node.addr; gEl.appendChild(atx);
+
+  // glow for active states
+  if (state !== 'normal' && state !== 'path') {
+    var gw = document.createElementNS(ns,'rect');
+    gw.setAttribute('x', rx-5); gw.setAttribute('y', ry-5);
+    gw.setAttribute('width', NW+10); gw.setAttribute('height', NH+10);
+    gw.setAttribute('rx','5'); gw.setAttribute('fill', c.stroke + '22');
+    gEl.appendChild(gw);
+  }
+
+  // main rect
+  var rect = document.createElementNS(ns,'rect');
+  rect.setAttribute('x', rx); rect.setAttribute('y', ry);
+  rect.setAttribute('width', NW); rect.setAttribute('height', NH); rect.setAttribute('rx','3');
+  rect.setAttribute('fill', c.fill); rect.setAttribute('stroke', c.stroke);
+  rect.setAttribute('stroke-width', c.sw); gEl.appendChild(rect);
+
+  // vertical dividers at 1/3 and 2/3
+  [1,2].forEach(function(k) {
+    var dl = document.createElementNS(ns,'line');
+    dl.setAttribute('x1', rx + k*NW/3); dl.setAttribute('y1', ry);
+    dl.setAttribute('x2', rx + k*NW/3); dl.setAttribute('y2', ry+NH);
+    dl.setAttribute('stroke','#d0d9ee'); dl.setAttribute('stroke-width','0.5');
+    gEl.appendChild(dl);
+  });
+
+  // data value (left cell, centered)
+  var dv = document.createElementNS(ns,'text');
+  dv.setAttribute('x', rx + NW/6); dv.setAttribute('y', ry + NH/2 + 5);
+  dv.setAttribute('text-anchor','middle'); dv.setAttribute('font-size','13');
+  dv.setAttribute('font-weight','700'); dv.setAttribute('font-family','JetBrains Mono,monospace');
+  dv.setAttribute('fill', c.textFill); dv.textContent = node.key; gEl.appendChild(dv);
+
+  // L header
+  var lh = document.createElementNS(ns,'text');
+  lh.setAttribute('x', rx + NW/2); lh.setAttribute('y', ry+13);
+  lh.setAttribute('text-anchor','middle'); lh.setAttribute('font-size','7');
+  lh.setAttribute('fill','#9dacc8'); lh.setAttribute('font-weight','700');
+  lh.textContent = 'L'; gEl.appendChild(lh);
+
+  // L address
+  var la = document.createElementNS(ns,'text');
+  la.setAttribute('x', rx + NW/2); la.setAttribute('y', ry+37);
+  la.setAttribute('text-anchor','middle'); la.setAttribute('font-size','6.5');
+  la.setAttribute('font-family','monospace'); la.setAttribute('font-weight','600');
+  la.setAttribute('fill', node.left ? '#059669' : '#d0d9ee');
+  la.textContent = node.left ? node.left.addr : 'NULL'; gEl.appendChild(la);
+
+  // R header
+  var rh = document.createElementNS(ns,'text');
+  rh.setAttribute('x', rx + 5*NW/6); rh.setAttribute('y', ry+13);
+  rh.setAttribute('text-anchor','middle'); rh.setAttribute('font-size','7');
+  rh.setAttribute('fill','#9dacc8'); rh.setAttribute('font-weight','700');
+  rh.textContent = 'R'; gEl.appendChild(rh);
+
+  // R address
+  var ra = document.createElementNS(ns,'text');
+  ra.setAttribute('x', rx + 5*NW/6); ra.setAttribute('y', ry+37);
+  ra.setAttribute('text-anchor','middle'); ra.setAttribute('font-size','6.5');
+  ra.setAttribute('font-family','monospace'); ra.setAttribute('font-weight','600');
+  ra.setAttribute('fill', node.right ? '#db2777' : '#d0d9ee');
+  ra.textContent = node.right ? node.right.addr : 'NULL'; gEl.appendChild(ra);
+}
+
+function drawLink(ns, x1, y1, x2, y2, lG) {
+  var l = document.createElementNS(ns,'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1+NH/2);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2-NH/2);
+  l.setAttribute('stroke','#c7d2fe'); l.setAttribute('stroke-width','1.5'); lG.appendChild(l);
+}
+
+function renderTree(svgPrefix, treeRoot, hl) {
+  hl = hl || {};
+  var lG = document.getElementById(svgPrefix+'-lG');
+  var nG = document.getElementById(svgPrefix+'-nG');
+  var svg = document.getElementById(svgPrefix+'-svg');
+  if (!lG || !nG) return;
+  lG.innerHTML = ''; nG.innerHTML = '';
+  if (!treeRoot) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var t = document.createElementNS(ns,'text');
+    t.setAttribute('x','50%'); t.setAttribute('y','50%');
+    t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central');
+    t.setAttribute('fill','#b0bcd8'); t.setAttribute('font-size','13');
+    t.setAttribute('font-family','JetBrains Mono,monospace'); t.textContent='Empty tree';
+    nG.appendChild(t); return;
+  }
+  var ns = 'http://www.w3.org/2000/svg';
+  // resize viewbox
+  if (svg) {
+    var W = svg.parentElement ? (svg.parentElement.clientWidth || 700) : 700;
+    var H = svg.parentElement ? (svg.parentElement.clientHeight || 340) : 340;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  }
+  function walk(node) {
+    if (!node) return;
+    if (node.left)  drawLink(ns, node.x, node.y, node.left.x,  node.left.y,  lG);
+    if (node.right) drawLink(ns, node.x, node.y, node.right.x, node.right.y, lG);
+    walk(node.left); walk(node.right);
+    drawNode(ns, node, hl[node.key] || 'normal', nG);
+  }
+  walk(treeRoot);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STEP ENGINE
+// ═══════════════════════════════════════════════════════════════
+var aSteps = [[],[],[],[],[],[]];
+var aIdx   = [0,0,0,0,0,0];
+var aZoom  = [1,1,1,1,1,1];
+var aTab   = 0;
+
+function snap(tid, lineId, treeRoot, hl, stack, infoHtml, hlClass, condResult, result) {
+  aSteps[tid].push({
+    line:   lineId,
+    tree:   treeRoot ? treeRoot.clone() : null,
+    hl:     hl ? JSON.parse(JSON.stringify(hl)) : {},
+    stack:  stack ? stack.map(function(f){ return {fn:f.fn,args:f.args}; }) : [],
+    info:   infoHtml || '',
+    hc:     hlClass || null,
+    cond:   condResult || null,
+    result: result || null
+  });
+}
+
+function applyStep(tid, idx) {
+  var steps = aSteps[tid];
+  if (!steps.length) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  var s = steps[idx];
+  // draw tree
+  renderTree('t'+tid, s.tree, s.hl);
+  // highlight code
+  var ce = document.getElementById('t'+tid+'-code');
+  if (ce) {
+    ce.querySelectorAll('.line').forEach(function(l) { l.classList.remove('hl','ret','hl-grn'); });
+    if (s.line) {
+      var el = document.getElementById(s.line);
+      if (el) { el.classList.add(s.hc || 'hl'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+    }
+  }
+  // call stack
+  renderCS(tid, s.stack);
+  // info bar
+  var ib = document.getElementById('t'+tid+'-info');
+  if (ib && s.info) ib.innerHTML = s.info;
+  // cond bar
+  var cb = document.getElementById('t'+tid+'-cond');
+  if (cb) {
+    if (s.cond) {
+      cb.classList.add('show');
+      var isT = s.cond === 'true';
+      cb.innerHTML = '<span style="color:#7a8bb0;font-size:9px">Condition:</span>&nbsp;' + (isT ? '<span class="cp-t">TRUE</span>' : '<span class="cp-f">FALSE</span>') + '&nbsp;<span style="font-size:9px;color:#7a8bb0">' + (s.cond_msg || '') + '</span>';
+    } else { cb.classList.remove('show'); cb.innerHTML = ''; }
+  }
+  // step badge
+  document.getElementById('t'+tid+'-sn').textContent = idx+1;
+  document.getElementById('t'+tid+'-st').textContent = steps.length;
+  document.getElementById('t'+tid+'-pb').disabled = (idx <= 0);
+  document.getElementById('t'+tid+'-nb').disabled = (idx >= steps.length - 1);
+  // FF button: disabled only when already at last step
+  var ffBtn = S('t'+tid+'-ff');
+  if (ffBtn) ffBtn.disabled = (idx >= steps.length - 1);
+  // Console output: show when step carries a consoleOut property
+  if (s.consoleOut !== undefined) {
+    var cout = S('t'+tid+'-cout');
+    if (cout) {
+      cout.className = 'console-text' + (s.consoleOut.err ? ' err' : '');
+      cout.textContent = s.consoleOut.text;
+    }
+  }
+}
+
+function nextStep(tid) { if (aIdx[tid]<aSteps[tid].length-1){aIdx[tid]++;applyStep(tid,aIdx[tid]);} }
+function prevStep(tid) { if (aIdx[tid]>0){aIdx[tid]--;applyStep(tid,aIdx[tid]);} }
+function resetOp(tid)  {
+  aIdx[tid]=0;
+  if(aSteps[tid].length) applyStep(tid,0);
+  else { renderTree('t'+tid,null,{}); renderCS(tid,[]); }
+  // Reset console
+  var cout = S('t'+tid+'-cout');
+  if (cout) { cout.className='console-text dim'; cout.textContent='— run operation to see output —'; }
+  // Reset FF button
+  var ff = S('t'+tid+'-ff');
+  if (ff) ff.disabled = (aSteps[tid].length === 0);
+}
+
+function ffStep(tid) {
+  // Jump to last step instantly
+  var steps = aSteps[tid];
+  if (!steps.length) return;
+  aIdx[tid] = steps.length - 1;
+  applyStep(tid, aIdx[tid]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALL STACK RENDERER
+// ═══════════════════════════════════════════════════════════════
+var FN_COLORS = {
+  main:       {bg:'#fdf2f8',b:'#ec4899',t:'#be185d'},
+  insert:     {bg:'#f5f3ff',b:'#7c3aed',t:'#6d28d9'},
+  createNode: {bg:'#fffbeb',b:'#f59e0b',t:'#b45309'},
+  search:     {bg:'#f0fdf4',b:'#16a34a',t:'#15803d'},
+  deleteNode: {bg:'#fef2f2',b:'#dc2626',t:'#b91c1c'},
+  findMin:    {bg:'#fffbeb',b:'#d97706',t:'#92400e'},
+  findMax:    {bg:'#fff7ed',b:'#b45309',t:'#78350f'},
+  predecessor:{bg:'#f5f3ff',b:'#7c3aed',t:'#6d28d9'},
+  successor:  {bg:'#f0fdfa',b:'#0d9488',t:'#0f766e'},
+};
+function renderCS(tid, stack) {
+  var el = document.getElementById('t'+tid+'-stack');
+  el.innerHTML = '';
+  if (!stack || !stack.length) { el.innerHTML='<div style="color:#b0bcd8;font-size:10px;text-align:center;padding:14px">empty</div>'; return; }
+  stack.forEach(function(f, i) {
+    var isTop = (i === stack.length-1);
+    var col = FN_COLORS[f.fn] || {bg:'#f8faff',b:'#9dacc8',t:'#64748b'};
+    var d = document.createElement('div'); d.className = 'sf';
+    d.style.cssText = 'background:'+col.bg+';border:1px solid '+(isTop?col.b:col.b+'55')+';'+(isTop?'box-shadow:0 0 0 2px '+col.b+'33;':'');
+    d.innerHTML = '<div class="sf-fn" style="color:'+col.t+'">'+f.fn+'()</div>'
+      + '<div class="sf-args">'+( f.args || '&nbsp;')+'</div>'
+      + (isTop ? '<span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:8px;color:'+col.b+';font-weight:700">SP</span>' : '');
+    el.appendChild(d);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function S(id) { return document.getElementById(id); }
+function A(obj, extra) { var r={}; for(var k in obj)r[k]=obj[k]; for(var k in extra)r[k]=extra[k]; return r; }
+
+function setInfo(tid, html) {
+  var el = S('t'+tid+'-info');
+  if (el) el.innerHTML = html;
+}
+function enableBtns(tid) {
+  var steps = aSteps[tid];
+  S('t'+tid+'-nb').disabled = (!steps.length || aIdx[tid] >= steps.length - 1);
+  S('t'+tid+'-pb').disabled = (aIdx[tid] <= 0);
+  S('t'+tid+'-sn').textContent = steps.length ? '1' : '0';
+  S('t'+tid+'-st').textContent = steps.length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 0 — BUILD BST (empty start, step through inserts)
+// ═══════════════════════════════════════════════════════════════
+var BUILD_KEYS = [50,30,70,20,40,60,80];
+
+// Shared tree produced by Tab 0 build, available to all other tabs
+var builtTree = null;
+
+function useBuiltTree(tid) {
+  if (!builtTree) {
+    // Build it from current BUILD_KEYS if not yet produced
+    builtTree = buildBST(BUILD_KEYS);
+  }
+  var t = builtTree.clone();
+  layoutTree(t);
+  var labels = ['','searchTree','mmTree','predTree','succTree','delTree'];
+  var setters = [null,
+    function(v){ searchTree = v; },
+    function(v){ mmTree = v; },
+    function(v){ predTree = v; },
+    function(v){ succTree = v; },
+    function(v){ delTree = v; }
+  ];
+  if (setters[tid]) setters[tid](t);
+  // Reset steps for that tab
+  aSteps[tid] = []; aIdx[tid] = 0;
+  renderTree('t'+tid, t, {});
+  // Clear cond bar
+  var cb = S('t'+tid+'-cond');
+  if (cb) { cb.classList.remove('show'); cb.innerHTML = ''; }
+  // Reset console
+  var cout = S('t'+tid+'-cout');
+  if (cout) { cout.className='console-text dim'; cout.textContent='— run operation to see output —'; }
+  // Reset nav buttons
+  S('t'+tid+'-nb').disabled = true;
+  S('t'+tid+'-pb').disabled = true;
+  var ffb = S('t'+tid+'-ff'); if (ffb) ffb.disabled = true;
+  S('t'+tid+'-sn').textContent = '0';
+  S('t'+tid+'-st').textContent = '0';
+  // Describe what tree was loaded
+  var keys = collectKeys(t);
+  var h = heightOf(t), n = keys.length;
+  var logH = Math.ceil(Math.log2(n+1));
+  var kind = h <= logH ? 'balanced' : h > logH*2 ? 'skewed' : 'unbalanced';
+  setInfo(tid, '&#127794; <b>Tab 01 tree loaded</b> — ['+keys.join(', ')+'] &nbsp;h='+h+', n='+n+' &nbsp;<span class="badge '+(kind==='balanced'?'bg':kind==='skewed'?'bb':'bo')+'">'+kind+'</span>. Ready for operation.');
+}
+
+function collectKeys(node) {
+  if (!node) return [];
+  return collectKeys(node.left).concat([node.key]).concat(collectKeys(node.right));
+}
+function heightOf(node) {
+  if (!node) return 0;
+  return 1 + Math.max(heightOf(node.left), heightOf(node.right));
+}
+
+var BUILD_PRESETS = {
+  'balanced':  { keys:[50,30,70,20,40,60,80],   label:'balanced [50,30,70,20,40,60,80]',   desc:'Balanced BST — height O(log n). Perfect balance: each insert is placed at the right position.' },
+  'unbalanced':{ keys:[40,20,70,10,30,60,80,25], label:'unbalanced [40,20,70,10,30,60,80,25]', desc:'Unbalanced BST — most ops still O(log n) average, but some subtrees heavier than others.' },
+  'skew-r':    { keys:[10,20,30,40,50],          label:'right skew [10,20,30,40,50]',       desc:'Right-skewed BST — sorted ascending input. Every node only has a right child. Degrades to O(n)!' },
+  'skew-l':    { keys:[50,40,30,20,10],          label:'left skew [50,40,30,20,10]',        desc:'Left-skewed BST — sorted descending input. Every node only has a left child. Degrades to O(n)!' },
+};
+
+function loadBuildPreset(type) {
+  var p = BUILD_PRESETS[type]; if (!p) return;
+  BUILD_KEYS = p.keys.slice();
+  // Clear any custom chips
+  customKeys = [];
+  renderBuildChips();
+  // Update label
+  var lbl = S('t0-preset-label');
+  if (lbl) lbl.textContent = p.label;
+  // Update C code main() body to show correct insert lines
+  updateBuildMainCode(BUILD_KEYS);
+  // Rebuild animation steps
+  buildTab0();
+  setInfo(0, '<b>' + type + ':</b> ' + p.desc + ' — press Next to step through.');
+}
+
+function updateBuildMainCode(keys) {
+  // Dynamically rebuild all insert lines inside main() in the C code panel.
+  // We replace the fixed b25..b31 slots with a flexible set of lines.
+  var codeEl = S('t0-code');
+  if (!codeEl) return;
+
+  // Remove any previously generated custom lines
+  codeEl.querySelectorAll('.gen-insert-line').forEach(function(el){ el.parentNode.removeChild(el); });
+
+  // Hide/show original fixed slots b25-b31 (we will replace them)
+  var fixedIds = ['b25','b26','b27','b28','b29','b30','b31'];
+  fixedIds.forEach(function(id){ var el=S(id); if(el) el.style.display='none'; });
+
+  // Find anchor: insert after b24 line (Node *root = NULL;)
+  var anchor = S('b24');
+  if (!anchor) return;
+
+  // Build and insert new lines after anchor
+  var insertAfter = anchor;
+  keys.forEach(function(val, i) {
+    var d = document.createElement('div');
+    d.className = 'line gen-insert-line';
+    d.id = 'bi-' + i;
+    d.innerHTML = '  root = <span class="fn">insert</span>(root, <span class="num">' + val + '</span>);';
+    insertAfter.parentNode.insertBefore(d, insertAfter.nextSibling);
+    insertAfter = d;
+  });
+}
+
+// ── Custom key chips ──────────────────────────────────────────
+var customKeys = [];   // keys the user has typed
+
+function renderBuildChips() {
+  var el = S('t0-chips'); if (!el) return;
+  el.innerHTML = '';
+  customKeys.forEach(function(k, i) {
+    var chip = document.createElement('span');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:#1e3560;border:1px solid #2a4a80;border-radius:10px;font-size:10px;color:#93c5fd;';
+    chip.innerHTML = k + '<span onclick="removeCustomKey('+i+')" style="cursor:pointer;color:#60a5fa;font-size:11px;line-height:1;padding:0 1px;margin-left:2px;">&times;</span>';
+    el.appendChild(chip);
+  });
+}
+
+function addBuildKey() {
+  var inp = S('t0-custom-input'); if (!inp) return;
+  var raw = inp.value.trim();
+  if (!raw) return;
+  // Support comma-separated batch entry
+  var parsed = raw.split(',').map(function(s){ return parseInt(s.trim(), 10); }).filter(function(n){ return !isNaN(n); });
+  var added = false;
+  parsed.forEach(function(n) {
+    if (customKeys.indexOf(n) < 0) { customKeys.push(n); added = true; }
+  });
+  inp.value = '';
+  if (added) renderBuildChips();
+}
+
+function removeCustomKey(i) {
+  customKeys.splice(i, 1);
+  renderBuildChips();
+}
+
+function clearCustomKeys() {
+  customKeys = [];
+  renderBuildChips();
+  S('t0-custom-input').value = '';
+}
+
+function buildCustomTree() {
+  // Merge any text still in the input box
+  var inp = S('t0-custom-input');
+  if (inp && inp.value.trim()) addBuildKey();
+  if (!customKeys.length) {
+    setInfo(0, '&#9888; Enter at least one key above and press <b>Build</b>.');
+    return;
+  }
+  var keys = customKeys.slice();
+  BUILD_KEYS = keys;
+  var lbl = S('t0-preset-label');
+  if (lbl) lbl.textContent = 'custom [' + keys.join(', ') + ']';
+  updateBuildMainCode(keys);
+  buildTab0();
+  setInfo(0, '<b>Custom tree</b> [' + keys.join(', ') + '] — press Next to step through the build.');
+}
+
+function buildTab0() {
+  var steps = aSteps[0] = [];
+  var root = null;
+  var cs = [{fn:'main',args:''}];
+
+  function S0(line, hl, info, hc, cond) {
+    steps.push({line:line, tree: root ? root.clone() : null, hl:hl||{}, stack:cs.map(function(f){return {fn:f.fn,args:f.args};}), info:info||'', hc:hc||null, cond:cond||null});
+  }
+
+  S0('b23',{},'<b>main()</b> begins');
+  S0('b24',{},'<span class="badge bo">root = NULL</span> — tree is empty');
+
+  BUILD_KEYS.forEach(function(val, vi) {
+    var mainLine = 'bi-'+vi;   // dynamic insert line ID
+    S0(mainLine, {}, 'main(): <b>root = insert(root, '+val+')</b>');
+
+    // trace path
+    var path = [];
+    var cur = root;
+    while (cur) {
+      path.push({key:cur.key, addr:cur.addr});
+      cur = val < cur.key ? cur.left : cur.right;
+    }
+
+    cs.push({fn:'insert',args:'r='+(root?root.addr:'NULL')+', v='+val});
+    S0('b14',{},    'insert() called with r='+(root?root.addr:'NULL')+', v='+val);
+    S0('b15',{},    'Check: r == NULL? → '+(root?'<span class="badge bb">FALSE</span>':'<span class="badge bg">TRUE</span>'));
+
+    if (!root) {
+      // empty tree insert
+      S0('b15',{},'r==NULL → <span class="badge bg">TRUE</span> → createNode('+val+')',null,'true');
+      S0('b16',{},'<b>createNode('+val+')</b> called');
+      cs.push({fn:'createNode',args:'v='+val});
+      S0('b7',{},'createNode('+val+'): allocate memory');
+      S0('b8',{},'n = malloc(sizeof(Node)) → <b>'+getAddr(val)+'</b>');
+      S0('b9',{},'n->data = '+val);
+      S0('b10',{},'n->left = NULL');
+      S0('b11',{},'n->right = NULL');
+      S0('b12',{},'<b>return</b> n ('+getAddr(val)+')',null);
+      cs.pop();
+      root = bstInsert(root, val); layoutTree(root);
+      S0('b16',{[val]:'found'},'createNode returned '+getAddr(val)+' → inserted as root!',null);
+      S0('b21',{[val]:'found'},'return r → root is now node('+val+')',null);
+    } else {
+      // non-empty: walk path
+      if (!path.length) {
+        S0('b15',{},   'r != NULL → <span class="badge bb">FALSE</span>',null,'false');
+      }
+      path.forEach(function(node, pi) {
+        var hl = {};
+        path.slice(0,pi).forEach(function(p){hl[p.key]='path';});
+        hl[node.key] = 'active';
+
+        if (pi === 0) S0('b15',hl,'r != NULL → <span class="badge bb">FALSE</span>',null,'false');
+        else {
+          cs.pop();
+          cs.push({fn:'insert',args:'r='+node.addr+', v='+val});
+          S0('b14',hl,'insert() recurse: r='+node.addr+', v='+val);
+          S0('b15',hl,'r != NULL → <span class="badge bb">FALSE</span>',null,'false');
+        }
+        if (val < node.key) {
+          S0('b17',hl,'v='+val+' < r->data='+node.key+' → go LEFT',null,'true');
+          S0('b18',hl,'r->left = insert(r->left, v)');
+        } else {
+          S0('b19',hl,'v='+val+' > r->data='+node.key+' → go RIGHT',null,'true');
+          S0('b20',hl,'r->right = insert(r->right, v)');
+        }
+      });
+
+      // NULL leaf
+      cs.push({fn:'insert',args:'r=NULL, v='+val});
+      var hl2 = {}; path.forEach(function(p){hl2[p.key]='path';});
+      S0('b15',hl2,'r==NULL → <span class="badge bg">TRUE</span>',null,'true');
+      S0('b16',hl2,'<b>createNode('+val+')</b>');
+      cs.push({fn:'createNode',args:'v='+val});
+      S0('b7', hl2,'createNode('+val+')');
+      S0('b8', hl2,'malloc → <b>'+getAddr(val)+'</b>');
+      S0('b9', hl2,'n->data = '+val);
+      S0('b10',hl2,'n->left = NULL');
+      S0('b11',hl2,'n->right = NULL');
+      S0('b12',hl2,'return '+getAddr(val));
+      cs.pop();
+      root = bstInsert(root, val); layoutTree(root);
+      var hl3 = {}; path.forEach(function(p){hl3[p.key]='path';}); hl3[val]='found';
+      S0('b16',hl3,'createNode returned → node('+val+') now in tree!');
+      cs.pop();
+      // unwind
+      path.slice().reverse().forEach(function(node,ri) {
+        cs.pop();
+        var hl4={}; path.forEach(function(p){hl4[p.key]='path';}); hl4[val]='found'; hl4[node.key]='active';
+        S0('b21',hl4,'return r ('+node.addr+') up the call stack','hl-grn');
+      });
+    }
+
+    cs.pop();
+    var finalHl = {}; finalHl[val] = 'found';
+    S0(mainLine, finalHl,'&#10003; node('+val+') inserted. Tree has '+(vi+1)+' node'+(vi>0?'s':'')+'.');
+  });
+
+  S0('b32',{},'main(): return 0 — all done!');
+  // Expose final tree for other tabs
+  builtTree = null; // will be cloned from root below
+  (function(){ var tmp = null; BUILD_KEYS.forEach(function(k){ tmp = bstInsert(tmp, k); }); layoutTree(tmp); builtTree = tmp; })();
+  aIdx[0] = 0;
+  applyStep(0, 0);
+  S('t0-nb').disabled = false;
+  S('t0-pb').disabled = true;
+  var ff0=S('t0-ff'); if(ff0) ff0.disabled=false;
+  S('t0-sn').textContent = '1';
+  S('t0-st').textContent = aSteps[0].length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 1 — SEARCH
+// ═══════════════════════════════════════════════════════════════
+var searchTree = null;
+
+function loadSearchTree(type) {
+  searchTree = buildBST(PRESETS[type] || PRESETS['balanced']);
+  renderTree('t1', searchTree, {});
+  aSteps[1] = []; aIdx[1] = 0;
+  setInfo(1, 'Tree loaded: <b>'+type+'</b>. Enter a key and press Search.');
+  S('t1-nb').disabled = true; S('t1-pb').disabled = true;
+  S('t1-sn').textContent = '0'; S('t1-st').textContent = '0';
+  S('t1-cond').classList.remove('show'); S('t1-cond').innerHTML = '';
+}
+
+function opSearch() {
+  var key = parseInt(S('srch-val').value, 10); if (isNaN(key)) return;
+  S('s-kd').textContent = key;
+  S('s15').innerHTML = '  Node *r = <span class="fn">search</span>(root, <span class="num">'+key+'</span>);';
+  if (!searchTree) { searchTree = buildBST(PRESETS['balanced']); layoutTree(searchTree); }
+  var tree = searchTree;
+  var steps = aSteps[1] = [];
+  aIdx[1] = 0;
+  var cs = [{fn:'main',args:''}];
+  var path = [];
+  var found = false;
+
+  function Ss(line,hl,info,hc,cond,consoleOut) {
+    steps.push({line:line,tree:tree.clone(),hl:hl||{},stack:cs.map(function(f){return{fn:f.fn,args:f.args};}),info:info||'',hc:hc||null,cond:cond||null,consoleOut:consoleOut||undefined});
+  }
+
+  Ss('s13',{},'main(): search(root, '+key+')');
+  cs.push({fn:'search',args:'r='+tree.addr+', key='+key});
+
+  var cur = tree;
+  while (cur) {
+    var hl = {}; path.forEach(function(k){hl[k]='path';}); hl[cur.key]='active';
+    if (path.length > 0) {
+      cs.pop();
+      cs.push({fn:'search',args:'r='+cur.addr+', key='+key});
+    }
+    Ss('s0',hl, 'search(): r=<b>'+cur.addr+'</b> (node '+cur.key+'), key='+key);
+    Ss('s1',hl, 'r != NULL → <span class="badge bb">FALSE</span>',null,'false');
+    Ss('s3',hl, 'key='+key+' == r->data='+cur.key+'? → '+(key===cur.key?'<span class="badge bg">TRUE</span>':'<span class="badge bb">FALSE</span>'),null,key===cur.key?'true':'false');
+
+    if (key === cur.key) {
+      var fhl = A(hl,{[cur.key]:'found'});
+      Ss('s4',fhl,'&#10003; <b>Found!</b> key='+key+' at '+cur.addr,null,'true');
+      var comps = path.length + 1, n = countNodes(tree);
+      Ss('s15',fhl,'search complete: '+comps+' comparison'+(comps>1?'s':'')+' &nbsp;<span class="badge '+(comps <= Math.ceil(Math.log2(n+1))+1 ? 'bg':'bb')+'">'+( comps <= Math.ceil(Math.log2(n+1))+1 ? 'O(log n)':'O(n)')+'</span>');
+      cs.pop(); cs[0].args='';
+      Ss('s16',fhl,'printf("Found %d\n", r->data) — <b>printing result</b>','hl-grn',null,{text:'Found '+key+'\n(node address: '+cur.addr+')'});
+      found = true; break;
+    }
+    path.push(cur.key);
+    if (key < cur.key) {
+      Ss('s5',hl,'key < r->data → go LEFT',null,'true');
+      Ss('s6',hl,'return search(r->left, key)');
+      cur = cur.left;
+    } else {
+      Ss('s5',hl,'key > r->data → go RIGHT',null,'false');
+      Ss('s7',hl,'return search(r->right, key)');
+      cur = cur.right;
+    }
+  }
+  if (!found) {
+    cs.push({fn:'search',args:'r=NULL, key='+key});
+    Ss('s1',{},'r==NULL → <span class="badge bg">TRUE</span> — key '+key+' NOT found',null,'true');
+    Ss('s2',{},'<b>return NULL</b> — not found after '+path.length+' comparisons','ret');
+    cs.pop(); cs[0].args='';
+    Ss('s17',{},'printf("Not found\n") — key '+key+' absent','hl-grn',null,{text:'Not found\n(key '+key+' does not exist in BST)',err:true});
+  }
+  applyStep(1, 0);
+  S('t1-nb').disabled = false; S('t1-pb').disabled = true;
+  S('t1-sn').textContent = '1'; S('t1-st').textContent = steps.length;
+}
+
+function countNodes(n) { if (!n) return 0; return 1 + countNodes(n.left) + countNodes(n.right); }
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 2 — MIN / MAX
+// ═══════════════════════════════════════════════════════════════
+var mmTree = null;
+
+function loadMMTree(type) {
+  mmTree = buildBST(PRESETS[type] || PRESETS['balanced']);
+  renderTree('t2', mmTree, {});
+  aSteps[2] = []; aIdx[2] = 0;
+  setInfo(2, 'Tree: <b>'+type+'</b>. Press Find Min or Find Max.');
+  S('t2-nb').disabled = true; S('t2-pb').disabled = true;
+  S('t2-sn').textContent = '0'; S('t2-st').textContent = '0';
+}
+
+function opMinMax(mode) {
+  if (!mmTree) { mmTree = buildBST(PRESETS['balanced']); layoutTree(mmTree); }
+  var isMin = mode === 'min';
+  var steps = aSteps[2] = [];
+  aIdx[2] = 0;
+  var cs = [{fn: isMin ? 'findMin' : 'findMax', args: 'r='+mmTree.addr}];
+  var path = [];
+  var cur = mmTree;
+
+  function Sm(line,hl,info,hc,consoleOut) {
+    steps.push({line:line,tree:mmTree.clone(),hl:hl||{},stack:cs.map(function(f){return{fn:f.fn,args:f.args};}),info:info||'',hc:hc||null,cond:null,consoleOut:consoleOut||undefined});
+  }
+
+  Sm(isMin?'m0':'m6', {}, (isMin?'findMin':'findMax')+'(root) called');
+  Sm(isMin?'m1':'m7', {}, 'r != NULL → proceed');
+
+  while (true) {
+    var hl = {}; path.forEach(function(k){hl[k]='path';}); hl[cur.key]='active';
+    var nxt = isMin ? cur.left : cur.right;
+    Sm(isMin?'m2':'m8', hl, 'At node <b>'+cur.key+'</b> ('+cur.addr+'). '+(isMin?'left':'right')+'='+(nxt?nxt.key:'NULL'));
+    if (!nxt) {
+      var fhl = A(hl, {[cur.key]:'minmax'});
+      Sm(isMin?'m4':'m10', fhl, (isMin?'r->left':'r->right')+'==NULL → <b>'+cur.key+'</b> is the '+(isMin?'minimum':'maximum')+'!');
+      Sm(isMin?'m-main5':'m-main6', fhl, 'printf("'+(isMin?'Min':'Max')+' = %d\\n") — <b>printing result</b>', 'hl-grn', {text:(isMin?'Min = ':'Max = ')+cur.key+'\n(address: '+cur.addr+')'});
+      break;
+    }
+    Sm(isMin?'m3':'m9', hl, 'Move '+(isMin?'left':'right')+' to '+nxt.key+' ('+nxt.addr+')');
+    path.push(cur.key);
+    cur = nxt;
+    cs[0].args = (isMin?'findMin':'findMax')+'('+cur.addr+')';
+  }
+  applyStep(2, 0);
+  S('t2-nb').disabled = false; S('t2-pb').disabled = true;
+  S('t2-sn').textContent = '1'; S('t2-st').textContent = steps.length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 3 — PREDECESSOR
+// ═══════════════════════════════════════════════════════════════
+var predTree = null;
+
+function loadPredTree(type) {
+  predTree = buildBST(PRESETS[type] || PRESETS['balanced']);
+  var defKey = PRED_PRESET_KEY[type] || '50';
+  S('pred-val').value = defKey;
+  renderTree('t3', predTree, {});
+  aSteps[3] = []; aIdx[3] = 0;
+  var desc = {
+    'left-sub': 'Tree for <b>Case 1</b>: predecessor lies in the LEFT subtree. Try key=50 → pred is max(left)=45.',
+    'ancestor': 'Tree for <b>Case 2</b>: predecessor is an ANCESTOR. Try key=60 → pred is ancestor 50 (last right-turn ancestor).',
+    'is-min':   'Tree where key is the MINIMUM. Try key=20 → no predecessor exists.'
+  };
+  setInfo(3, desc[type] || 'Choose a key and press Predecessor.');
+  S('t3-nb').disabled = true; S('t3-pb').disabled = true;
+  S('t3-sn').textContent = '0'; S('t3-st').textContent = '0';
+}
+
+function opPred() {
+  var key = parseInt(S('pred-val').value, 10); if (isNaN(key)) return;
+  var pkd=S('p-kd');if(pkd)pkd.textContent=key;
+var prkd=S('p-main3');if(prkd)prkd.innerHTML='  Node *pr = <span class="fn">predecessor</span>(root, <span class="num">'+key+'</span>);';
+  S('p18').innerHTML = '  Node *pr = <span class="fn">predecessor</span>(root, <span class="num">'+key+'</span>);';
+  if (!predTree) { predTree = buildBST(PRESETS['balanced']); layoutTree(predTree); }
+  var tree = predTree;
+  var steps = aSteps[3] = []; aIdx[3] = 0;
+  var cs = [{fn:'predecessor',args:'r='+tree.addr+', key='+key}];
+  var pred = null, path = [];
+
+  function Sp(line,hl,info,hc,consoleOut) {
+    // Include current pred value in call stack args
+    cs[0].args = 'r='+(cur?cur.addr:tree.addr)+', key='+key+', pred='+(pred?pred.key:'NULL');
+    steps.push({line:line,tree:tree.clone(),hl:hl||{},stack:cs.map(function(f){return{fn:f.fn,args:f.args};}),info:info||'',hc:hc||null,cond:null,consoleOut:consoleOut||undefined});
+  }
+
+  Sp('p0',{},'predecessor(root, key='+key+') called');
+  Sp('p1',{},'pred = NULL — no candidate yet');
+
+  var cur = tree;
+  while (cur) {
+    var hl = {}; path.forEach(function(k){hl[k]='path';}); if(pred) hl[pred.key]='pred'; hl[cur.key]='active';
+    Sp('p2',hl,'At node <b>'+cur.key+'</b> ('+cur.addr+'). key='+key+' == cur?');
+    if (key === cur.key) {
+      var thl = A(hl, {[cur.key]:'target'});
+      Sp('p3',thl,'key == r->data → <b>Found target</b> '+cur.key);
+      Sp('p11',thl,'Has left subtree? r->left = '+(cur.left?cur.left.key:'NULL'));
+      if (cur.left) {
+        var ml = cur.left; while(ml.right) ml = ml.right;
+        cs[0].args = 'r='+cur.addr+', key='+key+', pred='+ml.key;
+        cs[0].args = 'r='+cur.addr+', key='+key+', pred='+ml.key;
+        Sp('p12',A(thl,{[ml.key]:'pred'}),'Case 1: findMax(left) = <b>'+ml.key+'</b> → predecessor!');
+        Sp('p-main5',A(thl,{[ml.key]:'pred'}),'printf("Predecessor = %d\n", pr->data) — <b>printing result</b>','hl-grn',{text:'Predecessor = '+ml.key+'\n(max of left subtree, address: '+ml.addr+')'});
+      } else {
+        cs[0].args = 'r='+cur.addr+', key='+key+', pred='+(pred?pred.key:'NULL');
+        Sp('p13',thl,'No left subtree → pred = last right-turn ancestor = '+(pred?'<b>'+pred.key+'</b>':'NONE ('+key+' is minimum)'));
+        if(pred){Sp('p-main5',thl,'printf("Predecessor = %d\n", pr->data) — <b>printing result</b>','hl-grn',{text:'Predecessor = '+pred.key+'\n(ancestor: deepest right-turn ancestor)'});}
+        else{Sp('p-main7',thl,'printf("No predecessor\n") — <b>printing result</b>','hl-grn',{text:'No predecessor\n('+key+' is the minimum in BST)',err:true});}
+      }
+      break;
+    }
+    if (key < cur.key) {
+      Sp('p4',hl,'key='+key+' < r->data='+cur.key+' → go left (no pred update)');
+      Sp('p5',hl,'r = r->left ('+( cur.left?cur.left.addr:'NULL')+')');
+      path.push(cur.key); cur = cur.left;
+    } else {
+      Sp('p7',hl,'key='+key+' > r->data='+cur.key+' → <b>pred = '+cur.key+'</b>, go right');
+      pred = cur;
+      cs[0].args = 'r='+cur.addr+', key='+key+', pred='+pred.key;
+      Sp('p8',hl,'pred = '+cur.addr+' — new candidate pred='+pred.key);
+      path.push(cur.key); cur = cur.right;
+    }
+  }
+  if (!cur) {
+    var fhl = {}; if(pred) fhl[pred.key]='pred';
+    cs[0].args = 'r=NULL, key='+key+', pred='+(pred?pred.key:'NULL');
+    Sp('p2',fhl,'r==NULL — key '+key+' not in tree.',null,null,{text:'Key '+key+' not found in tree\n(predecessor not computed)',err:true});
+  }
+  applyStep(3, 0);
+  S('t3-nb').disabled = false; S('t3-pb').disabled = true;
+  S('t3-sn').textContent = '1'; S('t3-st').textContent = steps.length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 4 — SUCCESSOR
+// ═══════════════════════════════════════════════════════════════
+var succTree = null;
+
+function loadSuccTree(type) {
+  succTree = buildBST(PRESETS[type] || PRESETS['balanced']);
+  var defKey = SUCC_PRESET_KEY[type] || '50';
+  S('succ-val').value = defKey;
+  renderTree('t4', succTree, {});
+  aSteps[4] = []; aIdx[4] = 0;
+  var desc = {
+    'right-sub': 'Tree for <b>Case 1</b>: successor lies in the RIGHT subtree. Try key=50 → succ is min(right)=55.',
+    'ancestor':  'Tree for <b>Case 2</b>: successor is an ANCESTOR. Try key=40 → succ is ancestor 50.',
+    'is-max':    'Tree where key is the MAXIMUM. Try key=70 → no successor exists.'
+  };
+  setInfo(4, desc[type] || 'Choose a key and press Successor.');
+  S('t4-nb').disabled = true; S('t4-pb').disabled = true;
+  S('t4-sn').textContent = '0'; S('t4-st').textContent = '0';
+}
+
+function opSucc() {
+  var key = parseInt(S('succ-val').value, 10); if (isNaN(key)) return;
+  var ukd=S('u-kd');if(ukd)ukd.textContent=key;
+var uskd=S('u-main3');if(uskd)uskd.innerHTML='  Node *sc = <span class="fn">successor</span>(root, <span class="num">'+key+'</span>);';
+  S('u17').innerHTML = '  Node *sc = <span class="fn">successor</span>(root, <span class="num">'+key+'</span>);';
+  if (!succTree) { succTree = buildBST(PRESETS['balanced']); layoutTree(succTree); }
+  var tree = succTree;
+  var steps = aSteps[4] = []; aIdx[4] = 0;
+  var cs = [{fn:'successor',args:'r='+tree.addr+', key='+key}];
+  var succ = null, path = [];
+
+  function Su(line,hl,info,hc,consoleOut) {
+    // Include current succ value in call stack args
+    cs[0].args = 'r='+(cur?cur.addr:tree.addr)+', key='+key+', succ='+(succ?succ.key:'NULL');
+    steps.push({line:line,tree:tree.clone(),hl:hl||{},stack:cs.map(function(f){return{fn:f.fn,args:f.args};}),info:info||'',hc:hc||null,cond:null,consoleOut:consoleOut||undefined});
+  }
+
+  Su('u0',{},'successor(root, key='+key+') called');
+  Su('u1',{},'succ = NULL — no candidate yet');
+
+  var cur = tree;
+  while (cur) {
+    var hl = {}; path.forEach(function(k){hl[k]='path';}); if(succ) hl[succ.key]='succ'; hl[cur.key]='active';
+    Su('u2',hl,'At node <b>'+cur.key+'</b> ('+cur.addr+'). key='+key+' == cur?');
+    if (key === cur.key) {
+      var thl = A(hl, {[cur.key]:'target'});
+      Su('u3',thl,'key == r->data → <b>Found target</b> '+cur.key);
+      Su('u10',thl,'Has right subtree? r->right = '+(cur.right?cur.right.key:'NULL'));
+      if (cur.right) {
+        var ml = cur.right; while(ml.left) ml = ml.left;
+        cs[0].args = 'r='+cur.addr+', key='+key+', succ='+ml.key;
+        Su('u11',A(thl,{[ml.key]:'succ'}),'Case 1: findMin(right) = <b>'+ml.key+'</b> → successor!');
+        Su('u-main5',A(thl,{[ml.key]:'succ'}),'printf("Successor = %d\n", sc->data) — <b>printing result</b>','hl-grn',{text:'Successor = '+ml.key+'\n(min of right subtree, address: '+ml.addr+')'});
+      } else {
+        cs[0].args = 'r='+cur.addr+', key='+key+', succ='+(succ?succ.key:'NULL');
+        Su('u12',thl,'No right subtree → succ = last left-turn ancestor = '+(succ?'<b>'+succ.key+'</b>':'NONE ('+key+' is maximum)'));
+        if(succ){Su('u-main5',thl,'printf("Successor = %d\n", sc->data) — <b>printing result</b>','hl-grn',{text:'Successor = '+succ.key+'\n(ancestor: deepest left-turn ancestor)'});}
+        else{Su('u-main7',thl,'printf("No successor\n") — <b>printing result</b>','hl-grn',{text:'No successor\n('+key+' is the maximum in BST)',err:true});}
+      }
+      break;
+    }
+    if (key < cur.key) {
+      Su('u4',hl,'key='+key+' < r->data='+cur.key+' → <b>succ = '+cur.key+'</b>, go left');
+      succ = cur;
+      cs[0].args = 'r='+cur.addr+', key='+key+', succ='+succ.key;
+      Su('u5',hl,'succ = '+cur.addr+' — new candidate succ='+succ.key);
+      path.push(cur.key); cur = cur.left;
+    } else {
+      Su('u7',hl,'key='+key+' > r->data='+cur.key+' → go right (no succ update)');
+      Su('u8',hl,'r = r->right ('+( cur.right?cur.right.addr:'NULL')+')');
+      path.push(cur.key); cur = cur.right;
+    }
+  }
+  if (!cur) {
+    var fhl = {}; if(succ) fhl[succ.key]='succ';
+    cs[0].args = 'r=NULL, key='+key+', succ='+(succ?succ.key:'NULL');
+    Su('u2',fhl,'r==NULL — key '+key+' not in tree.',null,null,{text:'Key '+key+' not found in tree\n(successor not computed)',err:true});
+  }
+  applyStep(4, 0);
+  S('t4-nb').disabled = false; S('t4-pb').disabled = true;
+  S('t4-sn').textContent = '1'; S('t4-st').textContent = steps.length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 5 — DELETE
+// ═══════════════════════════════════════════════════════════════
+var delTree = null;
+
+function loadDelTree(type) {
+  delTree = buildBST(PRESETS[type] || PRESETS['balanced']);
+  layoutTree(delTree);
+  S('del-val').value = DEL_PRESET_KEY[type] || '20';
+  renderTree('t5', delTree, {});
+  aSteps[5] = []; aIdx[5] = 0;
+  var cout = S('t5-cout');
+  if (cout) { cout.className='console-text dim'; cout.textContent='— run deleteNode to see output —'; }
+  var desc = {
+    'leaf':      '<b>Case 1 — Leaf:</b> key=20 has no children. Will simply free it and return NULL.',
+    'one-child': '<b>Case 2 — One child:</b> key=30 has only a left child (20). Will bypass with child.',
+    'two-child': '<b>Case 3 — Two children:</b> key=30 has left=20 and right=40. Will replace with in-order successor.'
+  };
+  setInfo(5, desc[type] || 'Enter a key and press Delete.');
+  S('t5-nb').disabled = true; S('t5-pb').disabled = true;
+  var ff5 = S('t5-ff'); if (ff5) ff5.disabled = true;
+  S('t5-sn').textContent = '0'; S('t5-st').textContent = '0';
+}
+
+function opDelete() {
+  var key = parseInt(S('del-val').value, 10); if (isNaN(key)) return;
+
+  // Update main() display lines
+  var dm3 = S('d-main3');
+  if (dm3) dm3.innerHTML = '  root = <span class="fn">deleteNode</span>(root, <span class="num">'+key+'</span>);';
+  var dm4 = S('d-main4');
+  if (dm4) dm4.innerHTML = '  <span class="fn">printf</span>(<span class="str">"Node '+key+' deleted\\n"</span>);';
+  var dkd = S('d-kd');   if (dkd)  dkd.textContent = key;
+  var dkd2 = S('d-kd2'); if (dkd2) dkd2.textContent = key;
+
+  if (!delTree) { delTree = buildBST(PRESETS['leaf']); layoutTree(delTree); }
+
+  // Work on a snapshot so delTree stays intact for re-runs
+  var workTree = delTree.clone();
+  var orig = workTree;
+  var steps = aSteps[5] = []; aIdx[5] = 0;
+  var cs = [{fn:'deleteNode', args:'r='+orig.addr+', key='+key}];
+  var path = [];
+  var keyFound = false;
+
+  function Sd(line, hl, info, hc, consoleOut) {
+    steps.push({
+      line: line,
+      tree: orig.clone(),
+      hl:   hl || {},
+      stack: cs.map(function(f){ return {fn:f.fn, args:f.args}; }),
+      info:  info || '',
+      hc:    hc || null,
+      cond:  null,
+      consoleOut: consoleOut || undefined
+    });
+  }
+
+  Sd('d-main1', {}, 'main(): root = deleteNode(root, '+key+')');
+  Sd('d0', {},     'deleteNode(root, key='+key+') — begin search');
+
+  var cur = orig;
+  while (cur) {
+    var hl = {}; path.forEach(function(k){ hl[k] = 'path'; }); hl[cur.key] = 'active';
+    Sd('d1', hl, 'r = '+cur.addr+' (node '+cur.key+'). key='+key+' vs r->data='+cur.key);
+
+    if (key < cur.key) {
+      Sd('d2', hl, key+' < '+cur.key+' → recurse LEFT');
+      Sd('d3', hl, 'r->left = deleteNode(r->left, '+key+')');
+      cs.push({fn:'deleteNode', args:'r='+(cur.left?cur.left.addr:'NULL')+', key='+key});
+      path.push(cur.key);
+      cur = cur.left;
+
+    } else if (key > cur.key) {
+      Sd('d4', hl, key+' > '+cur.key+' → recurse RIGHT');
+      Sd('d5', hl, 'r->right = deleteNode(r->right, '+key+')');
+      cs.push({fn:'deleteNode', args:'r='+(cur.right?cur.right.addr:'NULL')+', key='+key});
+      path.push(cur.key);
+      cur = cur.right;
+
+    } else {
+      // ── KEY FOUND ──
+      keyFound = true;
+      var thl = A(hl, {[cur.key]: 'target'});
+      Sd('d6', thl, 'key == r->data → <b>Found node to delete: '+cur.key+'</b> ('+cur.addr+')');
+
+      var hasL = !!cur.left, hasR = !!cur.right;
+
+      if (!hasL && !hasR) {
+        // Case 1: leaf
+        Sd('d7',  thl, 'Case 1: <b>Leaf node</b> — no children');
+        Sd('d8',  thl, '!r->left &amp;&amp; !r->right → TRUE');
+        Sd('d9',  A(thl, {[cur.key]:'deleted'}), 'free(r) → return NULL', 'ret');
+        // mutate the permanent tree only now, after all pre-delete steps
+        delTree = bstDelete(delTree, key); layoutTree(delTree);
+        orig = delTree.clone();
+        Sd('d24', {}, '&#10003; Leaf node '+key+' removed. Tree updated.');
+        Sd('d-main4', {}, 'printf("Node '+key+' deleted\\n") — <b>output</b>', 'hl-grn',
+          {text:'Node '+key+' deleted\n(Case 1: leaf — simply freed)'});
+
+      } else if (!hasL) {
+        // Case 2a: only right child
+        var ch = cur.right;
+        Sd('d11', thl, 'Case 2a: <b>No left child</b> — bypass with right child ('+ch.key+')');
+        Sd('d12', thl, '!r->left → TRUE');
+        Sd('d13', A(thl, {[ch.key]:'succ'}), 't = r->right ('+ch.addr+'); free(r); return t', 'ret');
+        delTree = bstDelete(delTree, key); layoutTree(delTree);
+        orig = delTree.clone();
+        Sd('d24', {[ch.key]:'found'}, '&#10003; Node '+key+' removed; right child '+ch.key+' promoted.');
+        Sd('d-main4', {[ch.key]:'found'}, 'printf("Node '+key+' deleted\\n") — <b>output</b>', 'hl-grn',
+          {text:'Node '+key+' deleted\n(Case 2a: right child '+ch.key+' promoted)'});
+
+      } else if (!hasR) {
+        // Case 2b: only left child
+        var ch = cur.left;
+        Sd('d15', thl, 'Case 2b: <b>No right child</b> — bypass with left child ('+ch.key+')');
+        Sd('d16', thl, '!r->right → TRUE');
+        Sd('d17', A(thl, {[ch.key]:'succ'}), 't = r->left ('+ch.addr+'); free(r); return t', 'ret');
+        delTree = bstDelete(delTree, key); layoutTree(delTree);
+        orig = delTree.clone();
+        Sd('d24', {[ch.key]:'found'}, '&#10003; Node '+key+' removed; left child '+ch.key+' promoted.');
+        Sd('d-main4', {[ch.key]:'found'}, 'printf("Node '+key+' deleted\\n") — <b>output</b>', 'hl-grn',
+          {text:'Node '+key+' deleted\n(Case 2b: left child '+ch.key+' promoted)'});
+
+      } else {
+        // Case 3: two children — use in-order successor
+        var sn = cur.right; while (sn.left) sn = sn.left;
+        Sd('d19', thl, 'Case 3: <b>Two children</b> — need in-order successor');
+        Sd('d20', A(thl, {[sn.key]:'succ'}),
+          's = findMin(r->right) = <b>'+sn.key+'</b> ('+sn.addr+') — in-order successor');
+        Sd('d21', A(thl, {[sn.key]:'succ'}),
+          'r->data = s->data = '+sn.key+' — copy successor key into node '+cur.key);
+        Sd('d22', A(thl, {[sn.key]:'deleted'}),
+          'deleteNode(r->right, '+sn.key+') — recursively remove successor', 'ret');
+        delTree = bstDelete(delTree, key); layoutTree(delTree);
+        orig = delTree.clone();
+        Sd('d24', {[sn.key]:'found'},
+          '&#10003; Node '+key+' replaced by successor '+sn.key+'; successor deleted.');
+        Sd('d-main4', {[sn.key]:'found'},
+          'printf("Node '+key+' deleted\\n") — <b>output</b>', 'hl-grn',
+          {text:'Node '+key+' deleted\n(Case 3: replaced by in-order successor '+sn.key+')'});
+      }
+      break; // done
+    }
+
+    // If cur became null (key not in tree on this path)
+    if (!cur) break;
+  }
+
+  if (!keyFound) {
+    // Key not in tree — show null step
+    Sd('d1', {}, 'r == NULL — key '+key+' not found in tree', 'ret',
+      {text:'Key '+key+' not found\n(not in BST — nothing deleted)', err: true});
+  }
+
+  applyStep(5, 0);
+  S('t5-nb').disabled = (steps.length <= 1);
+  S('t5-pb').disabled = true;
+  var ff5 = S('t5-ff'); if (ff5) ff5.disabled = (steps.length <= 1);
+  S('t5-sn').textContent = '1';
+  S('t5-st').textContent = steps.length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCH
+// ═══════════════════════════════════════════════════════════════
+function switchTab(i) {
+  document.querySelectorAll('.tab-btn').forEach(function(b,j){b.classList.toggle('active',j===i);});
+  document.querySelectorAll('.tab-panel').forEach(function(p,j){p.classList.toggle('active',j===i);});
+  aTab = i;
+  setTimeout(function() {
+    if (aSteps[i].length) applyStep(i, aIdx[i]);
+    else {
+      var treeForTab = [null, searchTree, mmTree, predTree, succTree, delTree];
+      if (treeForTab[i]) renderTree('t'+i, treeForTab[i], {});
+    }
+  }, 40);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ZOOM
+// ═══════════════════════════════════════════════════════════════
+function zoomCode(tid, delta) {
+  aZoom[tid] = Math.max(.5, Math.min(2.5, aZoom[tid] + delta));
+  var cs = document.querySelectorAll('.code-scroll');
+  if (cs[tid]) cs[tid].style.fontSize = (aZoom[tid]*100) + '%';
+  S('t'+tid+'-zv').textContent = Math.round(aZoom[tid]*100) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL RESIZE — drag handles between all 3 columns, all 6 tabs
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var drag = null;
+
+  // Track current fr values per grid so we always resume from correct state
+  var gridFr = {};
+  function getGridFr(gid) {
+    if (!gridFr[gid]) gridFr[gid] = [1.4, 1, 0.7];
+    return gridFr[gid];
+  }
+
+  document.addEventListener('mousedown', function(e) {
+    var h = e.target.closest ? e.target.closest('.rh') : null;
+    if (!h) return;
+    e.preventDefault();
+    var gid = h.dataset.g;
+    var ci  = parseInt(h.dataset.c, 10);
+    var cg  = document.getElementById('cgrid'+gid);
+    if (!cg) return;
+
+    var W   = cg.offsetWidth;
+    var fr  = getGridFr(gid);
+    var tot = fr.reduce(function(a,b){return a+b;}, 0);
+    var sp  = fr.map(function(f){ return f / tot * W; });
+
+    h.style.background = 'rgba(37,99,235,0.25)';
+    drag = { h:h, cg:cg, gid:gid, ci:ci, sx:e.clientX, sp:sp.slice(), W:W };
+    document.body.style.cursor    = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.sx;
+    var mn = 120;
+    var px = drag.sp.slice();
+    var ci = drag.ci;
+    px[ci]   = Math.max(mn, drag.sp[ci]   + dx);
+    px[ci+1] = Math.max(mn, drag.sp[ci+1] - dx);
+    // Keep combined width constant
+    var cap = drag.sp[ci] + drag.sp[ci+1];
+    if (px[ci] + px[ci+1] !== cap) {
+      px[ci+1] = Math.max(mn, cap - px[ci]);
+      px[ci]   = Math.max(mn, cap - px[ci+1]);
+    }
+    drag.cg.style.gridTemplateColumns = px.map(function(p){ return (p/drag.W).toFixed(4)+'fr'; }).join(' ');
+    // Persist fr values
+    gridFr[drag.gid] = px.map(function(p){ return p / drag.W * 3; });
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!drag) return;
+    drag.h.style.background = '';
+    drag = null;
+    document.body.style.cursor    = '';
+    document.body.style.userSelect = '';
+  });
+
+  // Visual hover effect via CSS-in-JS since inline elements can't use :hover in all browsers
+  document.addEventListener('mouseover', function(e) {
+    var h = e.target.closest ? e.target.closest('.rh') : null;
+    if (h) h.style.background = 'rgba(37,99,235,0.15)';
+  });
+  document.addEventListener('mouseout', function(e) {
+    var h = e.target.closest ? e.target.closest('.rh') : null;
+    if (h && drag === null) h.style.background = '';
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// CONSOLE VERTICAL RESIZE
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  var cdrag = null;
+  document.addEventListener('mousedown', function(e){
+    var rh = e.target.closest ? e.target.closest('.console-rh') : null;
+    if (!rh) return;
+    e.preventDefault();
+    var cid = rh.dataset.console;
+    var con = document.getElementById(cid);
+    if (!con) return;
+    var startY = e.clientY;
+    var startH = con.offsetHeight;
+    rh.classList.add('drag');
+    cdrag = {rh:rh, con:con, startY:startY, startH:startH};
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', function(e){
+    if (!cdrag) return;
+    // Dragging UP increases console height (rh is above console)
+    var dy = cdrag.startY - e.clientY;
+    var newH = Math.max(28, Math.min(400, cdrag.startH + dy));
+    cdrag.con.style.maxHeight = newH + 'px';
+    cdrag.con.style.minHeight = newH + 'px';
+  });
+  document.addEventListener('mouseup', function(){
+    if (!cdrag) return;
+    cdrag.rh.classList.remove('drag');
+    cdrag = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('load', function() {
+  // Tab 0: set initial code + build animation
+  renderBuildChips();
+  updateBuildMainCode(BUILD_KEYS);
+  var lbl = S('t0-preset-label');
+  if (lbl) lbl.textContent = BUILD_PRESETS['balanced'].label;
+  buildTab0();
+  // Tab 1: load balanced search tree
+  searchTree = buildBST(PRESETS['balanced']);
+  renderTree('t1', searchTree, {});
+  // Tab 2: load balanced min/max tree
+  mmTree = buildBST(PRESETS['balanced']);
+  renderTree('t2', mmTree, {});
+  // Tab 3: load left-sub pred tree
+  predTree = buildBST(PRESETS['left-sub']);
+  S('pred-val').value = '50';
+  renderTree('t3', predTree, {});
+  setInfo(3, 'Choose an example type above, enter a key, then press Predecessor.');
+  // Tab 4: load right-sub succ tree
+  succTree = buildBST(PRESETS['right-sub']);
+  S('succ-val').value = '50';
+  renderTree('t4', succTree, {});
+  setInfo(4, 'Choose an example type above, enter a key, then press Successor.');
+  // Tab 5: load leaf delete tree
+  delTree = buildBST(PRESETS['leaf']);
+  S('del-val').value = '20';
+  renderTree('t5', delTree, {});
+  setInfo(5, '<b>Case examples loaded.</b> Leaf=20, One-child=30, Two-children=30. Choose a case then press Delete.');
+});
+window.addEventListener('resize', function() {
+  setTimeout(function() {
+    var trees = [null, searchTree, mmTree, predTree, succTree, delTree];
+    for (var i = 0; i < 6; i++) {
+      if (aSteps[i].length) { var s=aSteps[i][aIdx[i]]; if(s) renderTree('t'+i, s.tree, s.hl); }
+      else if (trees[i]) renderTree('t'+i, trees[i], {});
+    }
+  }, 60);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Expression Visualizer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg: #f0f4fa;
+  --border: #d0d9ee;
+  --header-bg: #1a2540;
+  --accent: #2563eb;
+  --text: #1e2a45;
+  --text-dim: #7a8bb0;
+  --text-code: #334166;
+  --kw: #db2777;
+  --fn: #7c3aed;
+  --str: #059669;
+  --cm: #9dacc8;
+  --num: #d97706;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: 0 20px;
+  background: var(--header-bg);
+  border-bottom: 1px solid #2a3a60;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 46px;
+  flex-shrink: 0;
+}
+.header-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #e8f0ff;
+}
+.header-title span { color: #60a5fa; }
+
+/* ── INPUT BAR ── */
+.input-bar {
+  background: #1e2d50;
+  border-bottom: 2px solid var(--border);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.input-bar label {
+  font-size: 10px;
+  color: #9dacc8;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+.expr-input {
+  flex: 1;
+  background: #0f1a35;
+  border: 1.5px solid #2a3a60;
+  border-radius: 5px;
+  padding: 6px 12px;
+  color: #e2e8f5;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.expr-input:focus { border-color: #2563eb; }
+.btn-run {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-run:hover { background: #1d4ed8; }
+.example-btns {
+  display: flex; gap: 5px;
+}
+.btn-example {
+  background: #2a3a60;
+  color: #9dacc8;
+  border: 1px solid #3a4a70;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-example:hover { background: #3a4a70; color: #e2e8f5; }
+
+/* ── TAB BAR ── */
+.tab-bar {
+  display: flex;
+  background: var(--header-bg);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+  padding: 0 12px;
+  gap: 2px;
+}
+.tab-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #9dacc8;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { background: rgba(255,255,255,0.06); color: #e2e8f5; }
+.tab-btn.active { background: var(--bg); color: var(--text); border-bottom-color: var(--accent); }
+
+/* ── TAB PANELS ── */
+.tab-panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.tab-panel.active { display: flex; }
+
+/* ── CONTENT GRID ── */
+.content-grid {
+  display: grid;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+.grid-3    { grid-template-columns: var(--col3, 1fr 1.1fr 0.85fr); }
+.grid-2    { grid-template-columns: var(--col2, 1fr 1fr); }
+.grid-tree { grid-template-columns: var(--colt, 1.2fr 1fr 0.8fr); }
+
+/* ── PANEL ── */
+.panel {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  position: relative; /* needed for resize handle hit area */
+}
+.panel:last-child { border-right: none; }
+
+/* ── RESIZE HANDLE ── */
+.resize-handle {
+  position: absolute;
+  top: 0; right: -4px;
+  width: 8px; height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+}
+.resize-handle::after {
+  content: '';
+  width: 3px; height: 40px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 0.15s, height 0.15s;
+}
+.resize-handle:hover::after,
+.resize-handle.dragging::after {
+  background: var(--accent);
+  height: 60px;
+}
+
+.panel-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  padding: 6px 14px;
+  background: #f8faff;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ── CODE SCROLL ── */
+.code-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  font-size: 100%;
+}
+.code-scroll::-webkit-scrollbar { width: 4px; }
+.code-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.line {
+  padding: 1px 14px;
+  border-left: 3px solid transparent;
+  white-space: pre;
+  font-size: 11px;
+  line-height: 1.9;
+  color: var(--text-code);
+  transition: background 0.12s;
+}
+
+/* Function bg tints — gentle wash over all lines in active fn */
+.fn-bg-main           { background: rgba(236,72,153,0.10) !important; border-left-color: #ec489966 !important; }
+.fn-bg-infixToPostfix { background: rgba(37,99,235,0.10)  !important; border-left-color: #2563eb66 !important; }
+.fn-bg-evalPostfix    { background: rgba(16,185,129,0.10) !important; border-left-color: #10b98166 !important; }
+.fn-bg-buildTree      { background: rgba(139,92,246,0.10) !important; border-left-color: #8b5cf666 !important; }
+.fn-bg-inorder        { background: rgba(37,99,235,0.10)  !important; border-left-color: #2563eb66 !important; }
+.fn-bg-preorder       { background: rgba(16,185,129,0.10) !important; border-left-color: #10b98166 !important; }
+.fn-bg-postorder      { background: rgba(249,115,22,0.10) !important; border-left-color: #f9731666 !important; }
+.fn-bg-precedence     { background: rgba(245,158,11,0.10) !important; border-left-color: #f59e0b66 !important; }
+.fn-bg-isOperator     { background: rgba(20,184,166,0.10) !important; border-left-color: #14b8a666 !important; }
+
+/* ── ACTIVE LINE — vivid yellow-marker highlight ── */
+.line.hl {
+  background: #fef08a !important;          /* bright lemon yellow */
+  border-left-color: #ca8a04 !important;   /* amber accent bar    */
+  border-left-width: 4px !important;
+  color: #1c1917 !important;               /* near-black text     */
+  font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1px #fde04788;   /* subtle inner glow   */
+}
+/* Return / special lines — red tint */
+.line.return-hl {
+  background: rgba(220,38,38,0.18) !important;
+  border-left-color: #dc2626 !important;
+  border-left-width: 4px !important;
+  color: #7f1d1d !important;
+  font-weight: 700 !important;
+}
+
+/* Syntax colours */
+.kw  { color: var(--kw); font-weight: 600; }
+.fn  { color: var(--fn); }
+.str { color: var(--str); }
+.cm  { color: var(--cm); font-style: italic; }
+.num { color: var(--num); }
+.ty  { color: #0369a1; }
+.divider-line { border-top: 1px solid var(--border); margin: 5px 0; }
+
+/* ── STACK / VISUALIZATION PANEL ── */
+.stack-wrap {
+  flex: 1; overflow-y: auto; padding: 8px;
+  display: flex; flex-direction: column;
+  justify-content: flex-end; gap: 3px; min-height: 0;
+}
+.stack-wrap::-webkit-scrollbar { width: 3px; }
+.stack-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+
+.sf {
+  border-radius: 5px; padding: 5px 10px;
+  font-size: 9.5px; line-height: 1.5;
+  border: 1px solid transparent;
+  animation: sfIn 0.2s ease; position: relative;
+}
+@keyframes sfIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+.sf-name { font-weight: 700; font-size: 10px; margin-bottom: 1px; }
+.sf-args { color: #8a9ab8; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
+.stack-base { text-align: center; font-size: 8px; color: #b0bcd8; padding: 5px; border-top: 1px dashed var(--border); letter-spacing: 1px; }
+
+/* ── VISUALIZER PANELS (stack/queue for tab content) ── */
+.vis-panel {
+  flex: 1; overflow-y: auto; padding: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* Token tape */
+.token-tape {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 8px;
+  background: #f8faff; border: 1px solid var(--border);
+  border-radius: 6px; min-height: 44px; align-items: center;
+}
+.tok {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; border-radius: 5px;
+  font-size: 13px; font-weight: 700;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  padding: 0 6px;
+}
+.tok-num    { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+.tok-op     { background: #eff6ff; border-color: #2563eb; color: #1d4ed8; }
+.tok-paren  { background: #f5f3ff; border-color: #8b5cf6; color: #6d28d9; }
+.tok-active { background: #fef3c7; border-color: #f59e0b; color: #92400e; box-shadow: 0 0 0 3px rgba(245,158,11,0.25); transform: scale(1.12); }
+.tok-done   { background: #dcfce7; border-color: #22c55e; color: #15803d; opacity: 0.7; }
+.tok-result { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; font-size: 15px; }
+
+/* Op stack / output strip */
+.strip-label { font-size: 9px; color: var(--text-dim); font-weight: 700; letter-spacing: 1px; margin-bottom: 3px; }
+.op-stack-row {
+  display: flex; gap: 3px; align-items: flex-end;
+  padding: 6px 8px; background: #f8faff;
+  border: 1px solid var(--border); border-radius: 6px;
+  min-height: 44px; flex-wrap: wrap;
+}
+.op-cell {
+  min-width: 30px; height: 30px; border-radius: 4px;
+  background: #e0e7ff; border: 1.5px solid #6366f1;
+  color: #4338ca; font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.op-cell.top { background: #c7d2fe; border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(99,102,241,0.25); }
+
+.out-strip {
+  display: flex; gap: 3px; align-items: center;
+  padding: 6px 8px; background: #f0fdf4;
+  border: 1px solid #86efac; border-radius: 6px;
+  min-height: 44px; flex-wrap: wrap;
+}
+.out-cell {
+  min-width: 30px; height: 30px; border-radius: 4px;
+  background: #dcfce7; border: 1.5px solid #22c55e;
+  color: #15803d; font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Eval stack */
+.eval-stack-col {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 6px; background: #f8faff;
+  border: 1px solid var(--border); border-radius: 6px;
+  min-height: 60px;
+}
+.eval-cell {
+  height: 30px; border-radius: 4px;
+  background: #ede9fe; border: 1.5px solid #8b5cf6;
+  color: #6d28d9; font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 8px;
+}
+.eval-cell.top { background: #ddd6fe; border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
+
+/* Info box */
+.info-box {
+  background: #f8faff; border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 12px;
+  font-size: 10px; color: var(--text-dim); line-height: 1.7;
+  flex-shrink: 0;
+}
+.info-box b { color: var(--text); }
+
+/* Result banner */
+.result-banner {
+  padding: 6px 14px; font-size: 11px; font-weight: 700;
+  background: #f0fdf4; border-top: 1px solid #86efac;
+  color: #15803d; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+}
+.result-banner.error { background: #fef2f2; border-top-color: #fca5a5; color: #dc2626; }
+.result-banner.info  { background: #eff6ff; border-top-color: #bfdbfe; color: #1d4ed8; }
+
+/* ── CTRL BAR ── */
+.ctrl-bar {
+  display: flex; gap: 6px; align-items: center;
+  padding: 7px 10px; border-top: 1px solid var(--border);
+  background: #f8faff; flex-shrink: 0;
+}
+.ctrl-bar button {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700;
+  padding: 5px 12px; border-radius: 4px;
+  border: 1px solid transparent; cursor: pointer; transition: all 0.15s;
+}
+.btn-next  { background: #2563eb; color: #fff; border-color: #2563eb; }
+.btn-next:hover  { background: #1d4ed8; }
+.btn-next:disabled  { background: #e2e8f5; color: #9dacc8; border-color: #e2e8f5; cursor: not-allowed; }
+.btn-prev  { background: #fff; color: #2563eb; border-color: #2563eb; }
+.btn-prev:hover  { background: #eff6ff; }
+.btn-prev:disabled  { background: #e2e8f5; color: #9dacc8; border-color: #e2e8f5; cursor: not-allowed; }
+.btn-reset { background: #fff; color: var(--text-dim); border-color: var(--border); }
+.btn-reset:hover { border-color: #9dacc8; }
+.step-badge {
+  font-size: 10px; color: var(--text-dim);
+  background: #edf2ff; padding: 4px 10px;
+  border-radius: 20px; border: 1px solid var(--border);
+  margin-left: auto;
+}
+.zoom-controls { display: flex; gap: 3px; align-items: center; }
+.btn-zoom {
+  background: #fff; color: var(--text-dim);
+  border: 1px solid var(--border); padding: 4px 7px;
+  font-size: 9px; font-weight: 700; border-radius: 3px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-zoom:hover { background: #edf2ff; color: #2563eb; }
+.zoom-val { font-size: 9px; color: var(--text-dim); min-width: 34px; text-align: center; font-weight: 700; }
+
+/* ── SVG TREE ── */
+.svg-wrap {
+  flex: 1; overflow: hidden; display: flex;
+  align-items: center; justify-content: center;
+  padding: 8px;
+}
+.tsvg { width: 100%; height: 100%; }
+
+/* ── TRAVERSAL OUTPUT ── */
+.trav-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff; font-size: 11px;
+}
+.trav-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim); min-width: 60px; }
+.trav-val   { font-weight: 700; font-size: 13px; }
+
+/* ── COND BADGE ── */
+.cond-bar {
+  height: 0; overflow: hidden; padding: 0 14px;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+  border-top: 1px solid transparent;
+  transition: all 0.2s;
+}
+.cond-bar.active { height: 28px; border-top-color: var(--border); background: #f8faff; }
+.cond-true  { color: #15803d; }
+.cond-false { color: #dc2626; }
+
+/* placeholder */
+.placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 8px; color: #b0bcd8;
+  font-size: 11px; text-align: center; padding: 20px;
+}
+.placeholder .big { font-size: 32px; }
+
+/* ── Tab 2 numeric input bar ── */
+.eval-input-bar {
+  background: #0f1f3d;
+  border-bottom: 1px solid #2a3a60;
+  padding: 7px 10px;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.eval-input-bar label {
+  font-size: 9px; color: #9dacc8; font-weight: 700;
+  letter-spacing: 1px; white-space: nowrap;
+}
+.eval-num-input {
+  flex: 1; background: #0a1628; border: 1.5px solid #2a3a60;
+  border-radius: 4px; padding: 5px 10px; color: #e2e8f5;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  font-weight: 600; outline: none; transition: border-color 0.15s;
+}
+.eval-num-input:focus { border-color: #10b981; }
+.btn-eval {
+  background: #10b981; color: #fff; border: none; border-radius: 4px;
+  padding: 5px 14px; font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-eval:hover { background: #059669; }
+.eval-examples { display: flex; gap: 4px; }
+.btn-eval-ex {
+  background: #1a3a30; color: #34d399; border: 1px solid #065f46;
+  border-radius: 3px; padding: 3px 7px; font-size: 9px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-eval-ex:hover { background: #064e3b; color: #6ee7b7; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Expression <span>Visualizer</span></div>
+  <div style="font-size:9px;color:#4a6080;letter-spacing:1px">INFIX → POSTFIX → EVAL → TREE → TRAVERSALS</div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab(0)">① Infix → Postfix</button>
+  <button class="tab-btn" onclick="switchTab(1)">② Evaluate Postfix</button>
+  <button class="tab-btn" onclick="switchTab(2)">③ Build Expr Tree</button>
+  <button class="tab-btn" onclick="switchTab(3)">④ Tree Traversals</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- TAB 1 — INFIX TO POSTFIX                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab0">
+  <div class="content-grid grid-3">
+
+    <!-- Left: Token tape + stacks -->
+    <div class="panel" id="t1-p0">
+      <div class="resize-handle" data-grid="tab0" data-col="0"></div>
+      <div class="panel-label"><span class="dot" style="background:#2563eb"></span>Token View</div>
+      <div class="eval-input-bar" style="flex-direction:column;gap:6px;padding:8px 10px;">
+        <div style="display:flex;align-items:center;gap:8px;width:100%">
+          <label>INFIX EXPR</label>
+          <input class="eval-num-input" id="exprInput" type="text" value="(a+b)*(c-d)" placeholder="e.g. (a+b)*(c-d)" style="border-color:#2563eb44;" />
+          <button class="btn-eval" onclick="runAll()" style="background:#2563eb;flex-shrink:0;">▶ Convert</button>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;padding-left:2px;">
+          <span style="font-size:9px;color:#9dacc8;font-weight:700;letter-spacing:1px;align-self:center;">EXAMPLES:</span>
+          <button class="btn-eval-ex" onclick="loadEx('(a+b)*(c-d)')" style="color:#3b82f6;border-color:#1d4ed8;background:#1e2d50">(a+b)*(c-d)</button>
+          <button class="btn-eval-ex" onclick="loadEx('a+b*c-d/e')" style="color:#3b82f6;border-color:#1d4ed8;background:#1e2d50">a+b*c-d/e</button>
+          <button class="btn-eval-ex" onclick="loadEx('(a+b)*(c+d)*(e-f)')" style="color:#3b82f6;border-color:#1d4ed8;background:#1e2d50">(a+b)*(c+d)*(e-f)</button>
+          <button class="btn-eval-ex" onclick="loadEx('a^b+c*d-e')" style="color:#3b82f6;border-color:#1d4ed8;background:#1e2d50">a^b+c*d-e</button>
+        </div>
+      </div>
+      <div class="vis-panel" id="t1-vis">
+        <div class="strip-label">INPUT TOKENS</div>
+        <div class="token-tape" id="t1-tokens"></div>
+        <div class="strip-label" style="margin-top:8px">OPERATOR STACK <span style="color:#4f46e5;font-size:8px">▲ TOP</span></div>
+        <div class="op-stack-row" id="t1-opstack"></div>
+        <div class="strip-label" style="margin-top:8px">OUTPUT (POSTFIX)</div>
+        <div class="out-strip" id="t1-output"></div>
+        <div class="info-box" id="t1-info" style="margin-top:8px">Press ▶ Build to start</div>
+      </div>
+    </div>
+
+    <!-- Mid: Source code -->
+    <div class="panel" id="t1-p1">
+      <div class="resize-handle" data-grid="tab0" data-col="1"></div>
+      <div class="panel-label"><span class="dot" style="background:#7c3aed"></span>Source Code</div>
+      <div class="code-scroll" id="t1-code">
+<div class="line" id="t1-iop1" data-fn="isOperator"><span class="kw">int</span> <span class="fn">isOperator</span>(<span class="kw">char</span> c) {</div>
+<div class="line" id="t1-iop2" data-fn="isOperator">  <span class="kw">return</span> c==<span class="str">'+'</span>||c==<span class="str">'-'</span>||c==<span class="str">'*'</span>||c==<span class="str">'/'</span>||c==<span class="str">'^'</span>;</div>
+<div class="line" id="t1-iop3" data-fn="isOperator">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t1-pr1" data-fn="precedence"><span class="kw">int</span> <span class="fn">precedence</span>(<span class="kw">char</span> op) {</div>
+<div class="line" id="t1-pr2" data-fn="precedence">  <span class="kw">if</span> (op==<span class="str">'^'</span>) <span class="kw">return</span> <span class="num">3</span>;</div>
+<div class="line" id="t1-pr3" data-fn="precedence">  <span class="kw">if</span> (op==<span class="str">'*'</span>||op==<span class="str">'/'</span>) <span class="kw">return</span> <span class="num">2</span>;</div>
+<div class="line" id="t1-pr4" data-fn="precedence">  <span class="kw">if</span> (op==<span class="str">'+'</span>||op==<span class="str">'-'</span>) <span class="kw">return</span> <span class="num">1</span>;</div>
+<div class="line" id="t1-pr5" data-fn="precedence">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="t1-pr6" data-fn="precedence">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t1-f1" data-fn="infixToPostfix"><span class="kw">void</span> <span class="fn">infixToPostfix</span>(<span class="kw">char</span> *expr, <span class="kw">char</span> *result) {</div>
+<div class="line" id="t1-f2" data-fn="infixToPostfix">  Stack s; init(&amp;s);</div>
+<div class="line" id="t1-f3" data-fn="infixToPostfix">  <span class="kw">int</span> i = <span class="num">0</span>, k = <span class="num">0</span>;</div>
+<div class="line" id="t1-f4" data-fn="infixToPostfix">  <span class="kw">while</span> (expr[i] != <span class="str">'\0'</span>) {</div>
+<div class="line" id="t1-f5" data-fn="infixToPostfix">    <span class="kw">char</span> ch = expr[i];</div>
+<div class="line" id="t1-f6" data-fn="infixToPostfix">    <span class="kw">if</span> (<span class="fn">isalnum</span>(ch)) {</div>
+<div class="line" id="t1-f7" data-fn="infixToPostfix">      result[k++] = ch; <span class="cm">// operand → output</span></div>
+<div class="line" id="t1-f8" data-fn="infixToPostfix">    } <span class="kw">else if</span> (ch == <span class="str">'('</span>) {</div>
+<div class="line" id="t1-f9" data-fn="infixToPostfix">      push(&amp;s, ch); <span class="cm">// push '('</span></div>
+<div class="line" id="t1-f10" data-fn="infixToPostfix">    } <span class="kw">else if</span> (ch == <span class="str">')'</span>) {</div>
+<div class="line" id="t1-f11" data-fn="infixToPostfix">      <span class="kw">while</span> (top(&amp;s) != <span class="str">'('</span>)</div>
+<div class="line" id="t1-f12" data-fn="infixToPostfix">        result[k++] = pop(&amp;s); <span class="cm">// pop until '('</span></div>
+<div class="line" id="t1-f13" data-fn="infixToPostfix">      pop(&amp;s); <span class="cm">// discard '('</span></div>
+<div class="line" id="t1-f14" data-fn="infixToPostfix">    } <span class="kw">else if</span> (<span class="fn">isOperator</span>(ch)) {</div>
+<div class="line" id="t1-f15" data-fn="infixToPostfix">      <span class="kw">while</span> (!<span class="fn">isEmpty</span>(&amp;s) &amp;&amp;</div>
+<div class="line" id="t1-f16" data-fn="infixToPostfix">             <span class="fn">precedence</span>(top(&amp;s)) &gt;= <span class="fn">precedence</span>(ch))</div>
+<div class="line" id="t1-f17" data-fn="infixToPostfix">        result[k++] = pop(&amp;s);</div>
+<div class="line" id="t1-f18" data-fn="infixToPostfix">      push(&amp;s, ch);</div>
+<div class="line" id="t1-f19" data-fn="infixToPostfix">    }</div>
+<div class="line" id="t1-f20" data-fn="infixToPostfix">    i++;</div>
+<div class="line" id="t1-f21" data-fn="infixToPostfix">  }</div>
+<div class="line" id="t1-f22" data-fn="infixToPostfix">  <span class="kw">while</span> (!<span class="fn">isEmpty</span>(&amp;s))</div>
+<div class="line" id="t1-f23" data-fn="infixToPostfix">    result[k++] = pop(&amp;s); <span class="cm">// flush remaining</span></div>
+<div class="line" id="t1-f24" data-fn="infixToPostfix">  result[k] = <span class="str">'\0'</span>;</div>
+<div class="line" id="t1-f25" data-fn="infixToPostfix">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t1-m1" data-fn="main"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="t1-m2" data-fn="main">  <span class="kw">char</span> infix[] = <span class="str">"<span id='t1-expr-display'>(a+b)*(c-d)</span>"</span>;</div>
+<div class="line" id="t1-m3" data-fn="main">  <span class="kw">char</span> postfix[<span class="num">100</span>];</div>
+<div class="line" id="t1-m4" data-fn="main">  <span class="fn">infixToPostfix</span>(infix, postfix);</div>
+<div class="line" id="t1-m5" data-fn="main">  <span class="fn">printf</span>(<span class="str">"Postfix: %s\n"</span>, postfix);</div>
+<div class="line" id="t1-m6" data-fn="main">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="t1-m7" data-fn="main">}</div>
+      </div>
+      <div class="cond-bar" id="t1-cond"></div>
+    </div>
+
+    <!-- Right: Call stack -->
+    <div class="panel">
+      <div class="panel-label"><span class="dot" style="background:#059669"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">▲ TOP</span></div>
+      <div class="stack-wrap" id="t1-stack"></div>
+      <div class="stack-base">▬ STACK BASE ▬</div>
+      <div class="ctrl-bar">
+        <button class="btn-reset" onclick="resetTab(0)">↺</button>
+        <button class="btn-prev"  id="t1-pbtn" onclick="prevTab(0)">← Prev</button>
+        <button class="btn-next"  id="t1-nbtn" onclick="stepTab(0)">Next →</button>
+        <div class="zoom-controls">
+          <button class="btn-zoom" onclick="zoomCode(0,-0.1)">−</button>
+          <span class="zoom-val"  id="t1-zoom">100%</span>
+          <button class="btn-zoom" onclick="zoomCode(0,0.1)">+</button>
+        </div>
+        <div class="step-badge">Step <b id="t1-sn">1</b>/<b id="t1-st">1</b></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- TAB 2 — EVALUATE POSTFIX                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab1">
+  <div class="content-grid grid-3">
+
+    <div class="panel" id="t2-p0">
+      <div class="resize-handle" data-grid="tab1" data-col="0"></div>
+      <div class="panel-label"><span class="dot" style="background:#10b981"></span>Postfix Tokens + Stack</div>
+      <div class="eval-input-bar">
+        <label>POSTFIX EXPR</label>
+        <input class="eval-num-input" id="evalNumInput" type="text" value="3 4 + 2 * 8 4 / - 5 +" placeholder="e.g. 3 4 2 * +  or  10 3 - 4 *" />
+        <button class="btn-eval" onclick="runEval()">▶ Evaluate</button>
+        <div class="eval-examples">
+          <button class="btn-eval-ex" onclick="loadEval('3 4 2 * +')">3+4*2</button>
+          <button class="btn-eval-ex" onclick="loadEval('10 3 - 4 * 2 +')">(10-3)*4+2</button>
+          <button class="btn-eval-ex" onclick="loadEval('100 4 / 3 2 * +')">100/4+3*2</button>
+          <button class="btn-eval-ex" onclick="loadEval('2 3 ^ 4 5 * + 6 2 / -')">2^3+4*5-6/2</button>
+          <button class="btn-eval-ex" onclick="loadEval('3 4 + 2 * 8 4 / - 5 +')" style="color:#f97316;border-color:#ea580c">(3+4)*2-8/4+5</button>
+        </div>
+      </div>
+      <div class="vis-panel" id="t2-vis">
+        <div class="strip-label">POSTFIX TOKENS (computed from infix)</div>
+        <div class="token-tape" id="t2-tokens"><span style="color:#b0bcd8;font-size:10px">press ▶ Evaluate to start</span></div>
+        <div class="strip-label" style="margin-top:8px">OPERAND STACK <span style="color:#7c3aed;font-size:8px">▲ TOP</span></div>
+        <div class="eval-stack-col" id="t2-evalstack"></div>
+        <div class="info-box" id="t2-info" style="margin-top:8px">Enter a numeric infix expression above and press ▶ Evaluate</div>
+      </div>
+    </div>
+
+    <div class="panel" id="t2-p1">
+      <div class="resize-handle" data-grid="tab1" data-col="1"></div>
+      <div class="panel-label"><span class="dot" style="background:#7c3aed"></span>Source Code</div>
+      <div class="code-scroll" id="t2-code">
+<div class="line" id="t2-m1" data-fn="main"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="t2-m2c" data-fn="main">  <span class="cm">/* postfix = "<span id='t2-expr-display'>3 4 2 * +</span>" */</span></div>
+<div class="line" id="t2-m3" data-fn="main">  <span class="fn">printf</span>(<span class="str">"Result: %g\n"</span>, <span class="fn">evalPostfix</span>(tokens, n));</div>
+<div class="line" id="t2-m4" data-fn="main">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="t2-m5" data-fn="main">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t2-f1" data-fn="evalPostfix"><span class="kw">double</span> <span class="fn">evalPostfix</span>(<span class="kw">char</span> *tokens[], <span class="kw">int</span> n) {</div>
+<div class="line" id="t2-f2" data-fn="evalPostfix">  Stack s; <span class="fn">init</span>(&amp;s);</div>
+<div class="line" id="t2-f3" data-fn="evalPostfix">  <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; n; i++) {</div>
+<div class="line" id="t2-f4" data-fn="evalPostfix">    <span class="kw">if</span> (<span class="fn">isNumber</span>(tokens[i])) {</div>
+<div class="line" id="t2-f5" data-fn="evalPostfix">      <span class="fn">push</span>(&amp;s, <span class="fn">atof</span>(tokens[i])); <span class="cm">// number → push directly</span></div>
+<div class="line" id="t2-f6" data-fn="evalPostfix">    } <span class="kw">else</span> { <span class="cm">// operator</span></div>
+<div class="line" id="t2-f7" data-fn="evalPostfix">      <span class="kw">double</span> b = <span class="fn">pop</span>(&amp;s), a = <span class="fn">pop</span>(&amp;s);</div>
+<div class="line" id="t2-f8" data-fn="evalPostfix">      <span class="fn">push</span>(&amp;s, <span class="fn">apply</span>(a, b, tokens[i][<span class="num">0</span>]));</div>
+<div class="line" id="t2-f9" data-fn="evalPostfix">    }</div>
+<div class="line" id="t2-f10" data-fn="evalPostfix">  }</div>
+<div class="line" id="t2-f11" data-fn="evalPostfix">  <span class="kw">return</span> <span class="fn">pop</span>(&amp;s);</div>
+<div class="line" id="t2-f12" data-fn="evalPostfix">}</div>
+      </div>
+      <div class="cond-bar" id="t2-cond"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span class="dot" style="background:#059669"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">▲ TOP</span></div>
+      <div class="stack-wrap" id="t2-stack"></div>
+      <div class="stack-base">▬ STACK BASE ▬</div>
+      <div class="result-banner info" id="t2-result">Postfix evaluation result appears here</div>
+      <div class="ctrl-bar">
+        <button class="btn-reset" onclick="resetTab(1)">↺</button>
+        <button class="btn-prev"  id="t2-pbtn" onclick="prevTab(1)">← Prev</button>
+        <button class="btn-next"  id="t2-nbtn" onclick="stepTab(1)">Next →</button>
+        <div class="zoom-controls">
+          <button class="btn-zoom" onclick="zoomCode(1,-0.1)">−</button>
+          <span class="zoom-val"  id="t2-zoom">100%</span>
+          <button class="btn-zoom" onclick="zoomCode(1,0.1)">+</button>
+        </div>
+        <div class="step-badge">Step <b id="t2-sn">1</b>/<b id="t2-st">1</b></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- TAB 3 — BUILD EXPRESSION TREE                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab2">
+  <div class="content-grid grid-tree">
+
+    <div class="panel" id="t3-p0">
+      <div class="resize-handle" data-grid="tab2" data-col="0"></div>
+      <div class="panel-label"><span class="dot" style="background:#8b5cf6"></span>Tree State</div>
+      <div class="eval-input-bar" style="background:#1a1040;border-bottom-color:#3b2080;">
+        <label style="color:#a78bfa;">POSTFIX EXPR</label>
+        <input class="eval-num-input" id="treePostfixInput" type="text" value="3 4 + 5 2 - *" placeholder="e.g. 3 4 + 5 2 - *" style="border-color:#7c3aed44;" />
+        <button class="btn-eval" onclick="runTree()" style="background:#7c3aed;">▶ Build Tree</button>
+        <div class="eval-examples">
+          <button class="btn-eval-ex" onclick="loadTree('3 4 + 5 2 - *')" style="color:#a78bfa;border-color:#6d28d9;background:#1e1060">(3+4)*(5-2)</button>
+          <button class="btn-eval-ex" onclick="loadTree('6 2 / 4 3 * +')" style="color:#a78bfa;border-color:#6d28d9;background:#1e1060">6/2+4*3</button>
+          <button class="btn-eval-ex" onclick="loadTree('5 1 2 + 4 * + 3 -')" style="color:#a78bfa;border-color:#6d28d9;background:#1e1060">complex</button>
+          <button class="btn-eval-ex" onclick="loadTree('2 3 ^ 4 5 * -')" style="color:#a78bfa;border-color:#6d28d9;background:#1e1060">2^3-4*5</button>
+        </div>
+      </div>
+      <div class="svg-wrap">
+        <svg class="tsvg" id="t3-svg" viewBox="0 0 520 300" preserveAspectRatio="xMidYMid meet">
+          <g id="t3-links"></g><g id="t3-nodes"></g>
+        </svg>
+      </div>
+      <div class="result-banner info" id="t3-result">Enter a postfix expression above and press ▶ Build Tree</div>
+    </div>
+
+    <div class="panel" id="t3-p1">
+      <div class="resize-handle" data-grid="tab2" data-col="1"></div>
+      <div class="panel-label"><span class="dot" style="background:#7c3aed"></span>Source Code</div>
+      <div class="code-scroll" id="t3-code">
+<div class="line" id="t3-m1" data-fn="main"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="t3-m2" data-fn="main">  <span class="kw">char</span> postfix[] = <span class="str">"<span id='t3-expr-display'>ab+cd-*</span>"</span>;</div>
+<div class="line" id="t3-m3" data-fn="main">  Node *root = <span class="fn">buildTree</span>(postfix);</div>
+<div class="line" id="t3-m4" data-fn="main">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="t3-m5" data-fn="main">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t3-f1" data-fn="buildTree">Node* <span class="fn">buildTree</span>(<span class="kw">char</span> *postfix) {</div>
+<div class="line" id="t3-f2" data-fn="buildTree">  Stack s; init(&amp;s);</div>
+<div class="line" id="t3-f3" data-fn="buildTree">  <span class="kw">int</span> i = <span class="num">0</span>;</div>
+<div class="line" id="t3-f4" data-fn="buildTree">  <span class="kw">while</span> (postfix[i] != <span class="str">'\0'</span>) {</div>
+<div class="line" id="t3-f5" data-fn="buildTree">    <span class="kw">char</span> ch = postfix[i];</div>
+<div class="line" id="t3-f6" data-fn="buildTree">    Node *node = <span class="fn">newNode</span>(ch);</div>
+<div class="line" id="t3-f7" data-fn="buildTree">    <span class="kw">if</span> (<span class="fn">isOperand</span>(ch)) {</div>
+<div class="line" id="t3-f8" data-fn="buildTree">      push(&amp;s, node); <span class="cm">// leaf node</span></div>
+<div class="line" id="t3-f9" data-fn="buildTree">    } <span class="kw">else</span> { <span class="cm">// operator</span></div>
+<div class="line" id="t3-f10" data-fn="buildTree">      node->right = pop(&amp;s);</div>
+<div class="line" id="t3-f11" data-fn="buildTree">      node->left  = pop(&amp;s);</div>
+<div class="line" id="t3-f12" data-fn="buildTree">      push(&amp;s, node);</div>
+<div class="line" id="t3-f13" data-fn="buildTree">    }</div>
+<div class="line" id="t3-f14" data-fn="buildTree">    i++;</div>
+<div class="line" id="t3-f15" data-fn="buildTree">  }</div>
+<div class="line" id="t3-f16" data-fn="buildTree">  <span class="kw">return</span> pop(&amp;s); <span class="cm">// root</span></div>
+<div class="line" id="t3-f17" data-fn="buildTree">}</div>
+      </div>
+      <div class="cond-bar" id="t3-cond"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span class="dot" style="background:#059669"></span>Node Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">▲ TOP</span></div>
+      <div class="stack-wrap" id="t3-stack"></div>
+      <div class="stack-base">▬ STACK BASE ▬</div>
+      <div class="ctrl-bar">
+        <button class="btn-reset" onclick="resetTab(2)">↺</button>
+        <button class="btn-prev"  id="t3-pbtn" onclick="prevTab(2)">← Prev</button>
+        <button class="btn-next"  id="t3-nbtn" onclick="stepTab(2)">Next →</button>
+        <div class="zoom-controls">
+          <button class="btn-zoom" onclick="zoomCode(2,-0.1)">−</button>
+          <span class="zoom-val"  id="t3-zoom">100%</span>
+          <button class="btn-zoom" onclick="zoomCode(2,0.1)">+</button>
+        </div>
+        <div class="step-badge">Step <b id="t3-sn">1</b>/<b id="t3-st">1</b></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- TAB 4 — TREE TRAVERSALS                           -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab3">
+  <div class="content-grid grid-tree">
+
+    <div class="panel" id="t4-p0">
+      <div class="resize-handle" data-grid="tab3" data-col="0"></div>
+      <div class="panel-label"><span class="dot" style="background:#2563eb"></span>Expression Tree</div>
+      <div class="eval-input-bar" style="background:#0f1e40;border-bottom-color:#1e3a70;">
+        <label style="color:#60a5fa;">POSTFIX EXPR</label>
+        <input class="eval-num-input" id="travPostfixInput" type="text" value="3 4 + 5 2 - *" placeholder="e.g. 3 4 + 5 2 - *" style="border-color:#2563eb44;" />
+        <button class="btn-eval" onclick="runTrav()" style="background:#2563eb;">▶ Traverse</button>
+        <div class="eval-examples">
+          <button class="btn-eval-ex" onclick="loadTrav('3 4 + 5 2 - *')" style="color:#60a5fa;border-color:#1d4ed8;background:#0f1e40">(3+4)*(5-2)</button>
+          <button class="btn-eval-ex" onclick="loadTrav('6 2 / 4 3 * +')" style="color:#60a5fa;border-color:#1d4ed8;background:#0f1e40">6/2+4*3</button>
+          <button class="btn-eval-ex" onclick="loadTrav('5 1 2 + 4 * + 3 -')" style="color:#60a5fa;border-color:#1d4ed8;background:#0f1e40">complex</button>
+          <button class="btn-eval-ex" onclick="loadTrav('2 3 ^ 4 5 * -')" style="color:#60a5fa;border-color:#1d4ed8;background:#0f1e40">2^3-4*5</button>
+        </div>
+      </div>
+      <div class="svg-wrap">
+        <svg class="tsvg" id="t4-svg" viewBox="0 0 520 220" preserveAspectRatio="xMidYMid meet">
+          <g id="t4-links"></g><g id="t4-nodes"></g>
+        </svg>
+      </div>
+      <div style="padding:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+        <div class="trav-row" id="t4-infix-row">
+          <span class="trav-label" style="color:#2563eb">INFIX</span>
+          <span class="trav-val" id="t4-infix" style="color:#2563eb">—</span>
+        </div>
+        <div class="trav-row" id="t4-prefix-row">
+          <span class="trav-label" style="color:#10b981">PREFIX</span>
+          <span class="trav-val" id="t4-prefix" style="color:#10b981">—</span>
+        </div>
+        <div class="trav-row" id="t4-postfix-row">
+          <span class="trav-label" style="color:#f97316">POSTFIX</span>
+          <span class="trav-val" id="t4-postfix" style="color:#f97316">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="t4-p1">
+      <div class="resize-handle" data-grid="tab3" data-col="1"></div>
+      <div class="panel-label"><span class="dot" style="background:#7c3aed"></span>Source Code</div>
+      <div class="code-scroll" id="t4-code">
+<div class="line" id="t4-m1" data-fn="main"><span class="kw">int</span> <span class="fn">main</span>() {</div>
+<div class="line" id="t4-m2" data-fn="main">  Node *root = <span class="fn">buildTree</span>(postfix);</div>
+<div class="line" id="t4-m3" data-fn="main">  <span class="fn">printf</span>(<span class="str">"Infix:  "</span>);  <span class="fn">inorder</span>(root);</div>
+<div class="line" id="t4-m4" data-fn="main">  <span class="fn">printf</span>(<span class="str">"Prefix: "</span>); <span class="fn">preorder</span>(root);</div>
+<div class="line" id="t4-m5" data-fn="main">  <span class="fn">printf</span>(<span class="str">"Postfix:"</span>); <span class="fn">postorder</span>(root);</div>
+<div class="line" id="t4-m6" data-fn="main">  <span class="kw">return</span> <span class="num">0</span>;</div>
+<div class="line" id="t4-m7" data-fn="main">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t4-in1" data-fn="inorder"><span class="kw">void</span> <span class="fn">inorder</span>(Node *r) {</div>
+<div class="line" id="t4-in2" data-fn="inorder">  <span class="kw">if</span> (r == NULL) <span class="kw">return</span>;</div>
+<div class="line" id="t4-in3" data-fn="inorder">  <span class="kw">if</span> (<span class="fn">isOperator</span>(r->data)) <span class="fn">printf</span>(<span class="str">"("</span>);</div>
+<div class="line" id="t4-in4" data-fn="inorder">  <span class="fn">inorder</span>(r->left);</div>
+<div class="line" id="t4-in5" data-fn="inorder">  <span class="fn">printf</span>(<span class="str">"%c "</span>, r->data);</div>
+<div class="line" id="t4-in6" data-fn="inorder">  <span class="fn">inorder</span>(r->right);</div>
+<div class="line" id="t4-in7" data-fn="inorder">  <span class="kw">if</span> (<span class="fn">isOperator</span>(r->data)) <span class="fn">printf</span>(<span class="str">")"</span>);</div>
+<div class="line" id="t4-in8" data-fn="inorder">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t4-pre1" data-fn="preorder"><span class="kw">void</span> <span class="fn">preorder</span>(Node *r) {</div>
+<div class="line" id="t4-pre2" data-fn="preorder">  <span class="kw">if</span> (r == NULL) <span class="kw">return</span>;</div>
+<div class="line" id="t4-pre3" data-fn="preorder">  <span class="fn">printf</span>(<span class="str">"%c "</span>, r->data);</div>
+<div class="line" id="t4-pre4" data-fn="preorder">  <span class="fn">preorder</span>(r->left);</div>
+<div class="line" id="t4-pre5" data-fn="preorder">  <span class="fn">preorder</span>(r->right);</div>
+<div class="line" id="t4-pre6" data-fn="preorder">}</div>
+<div class="divider-line"></div>
+<div class="line" id="t4-post1" data-fn="postorder"><span class="kw">void</span> <span class="fn">postorder</span>(Node *r) {</div>
+<div class="line" id="t4-post2" data-fn="postorder">  <span class="kw">if</span> (r == NULL) <span class="kw">return</span>;</div>
+<div class="line" id="t4-post3" data-fn="postorder">  <span class="fn">postorder</span>(r->left);</div>
+<div class="line" id="t4-post4" data-fn="postorder">  <span class="fn">postorder</span>(r->right);</div>
+<div class="line" id="t4-post5" data-fn="postorder">  <span class="fn">printf</span>(<span class="str">"%c "</span>, r->data);</div>
+<div class="line" id="t4-post6" data-fn="postorder">}</div>
+      </div>
+      <div class="cond-bar" id="t4-cond"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span class="dot" style="background:#059669"></span>Call Stack <span style="color:#b0bcd8;font-size:8px;margin-left:4px">▲ TOP</span></div>
+      <div class="stack-wrap" id="t4-stack"></div>
+      <div class="stack-base">▬ STACK BASE ▬</div>
+      <div class="ctrl-bar">
+        <button class="btn-reset" onclick="resetTab(3)">↺</button>
+        <button class="btn-prev"  id="t4-pbtn" onclick="prevTab(3)">← Prev</button>
+        <button class="btn-next"  id="t4-nbtn" onclick="stepTab(3)">Next →</button>
+        <div class="zoom-controls">
+          <button class="btn-zoom" onclick="zoomCode(3,-0.1)">−</button>
+          <span class="zoom-val"  id="t4-zoom">100%</span>
+          <button class="btn-zoom" onclick="zoomCode(3,0.1)">+</button>
+        </div>
+        <div class="step-badge">Step <b id="t4-sn">1</b>/<b id="t4-st">1</b></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// PALETTE — fn name → colour (same for code block + call stack)
+// ═══════════════════════════════════════════════════════════════
+const FN_PAL = {
+  main:           { bg:'#fdf2f8', border:'#ec4899', text:'#be185d' },
+  infixToPostfix: { bg:'#eff6ff', border:'#2563eb', text:'#1d4ed8' },
+  evalPostfix:    { bg:'#f0fdf4', border:'#10b981', text:'#047857' },
+  buildTree:      { bg:'#f5f3ff', border:'#8b5cf6', text:'#6d28d9' },
+  inorder:        { bg:'#eff6ff', border:'#3b82f6', text:'#1d4ed8' },
+  preorder:       { bg:'#f0fdf4', border:'#10b981', text:'#047857' },
+  postorder:      { bg:'#fff7ed', border:'#f97316', text:'#c2410c' },
+  precedence:     { bg:'#fffbeb', border:'#f59e0b', text:'#b45309' },
+  isOperator:     { bg:'#f0fdfa', border:'#14b8a6', text:'#0f766e' },
+};
+const FN_PAL_FB = { bg:'#f8fafc', border:'#94a3b8', text:'#475569' };
+
+const FN_BG_MAP = {
+  main:'fn-bg-main', infixToPostfix:'fn-bg-infixToPostfix',
+  evalPostfix:'fn-bg-evalPostfix', buildTree:'fn-bg-buildTree',
+  inorder:'fn-bg-inorder', preorder:'fn-bg-preorder',
+  postorder:'fn-bg-postorder', precedence:'fn-bg-precedence',
+  isOperator:'fn-bg-isOperator',
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STEP STATE
+// ═══════════════════════════════════════════════════════════════
+let tabSteps = [[],[],[],[]];
+let tabIdx   = [0,0,0,0];
+let tabZoom  = [1,1,1,1];
+let activeTab = 0;
+let currentExpr = '(a+b)*(c-d)';
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function isOp(c)    { return '+-*/^'.includes(c); }
+function isAlNum(c) { return /[a-zA-Z0-9]/.test(c); }
+function prec(c) {
+  if(c==='^') return 3;
+  if(c==='*'||c==='/') return 2;
+  if(c==='+'||c==='-') return 1;
+  return 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SNAP — creates a step snapshot
+// ═══════════════════════════════════════════════════════════════
+function snap(tid, data) {
+  tabSteps[tid].push({...data});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD EXPRESSION TREE (JS data structure)
+// ═══════════════════════════════════════════════════════════════
+let NODE_ID = 0;
+function mkNode(ch, left=null, right=null) {
+  return { id: NODE_ID++, val: ch, left, right };
+}
+
+function buildExprTree(postfix) {
+  // postfix can be a space-separated string or a char-by-char string
+  NODE_ID = 0;
+  const toks = postfix.includes(' ') ? parsePostfixInput(postfix) : postfix.split('');
+  const stack = [];
+  for(const ch of toks) {
+    const node = mkNode(ch);
+    if(isOp(ch)) {
+      node.right = stack.pop();
+      node.left  = stack.pop();
+    }
+    stack.push(node);
+  }
+  return stack.pop() || null;
+}
+
+// Layout tree positions
+function layoutTree(root) {
+  // Assign x via in-order traversal, y by depth
+  let counter = 0;
+  function assignX(node, depth) {
+    if(!node) return;
+    assignX(node.left, depth+1);
+    node._x = counter++;
+    node._y = depth;
+    assignX(node.right, depth+1);
+  }
+  assignX(root, 0);
+  // Count nodes
+  function countNodes(n) { return n ? 1+countNodes(n.left)+countNodes(n.right) : 0; }
+  const total = countNodes(root);
+  // Map _x 0..total-1 to SVG x coords
+  const W=520, H=320, padX=40, padY=50, nodeR=20;
+  function mapCoords(node) {
+    if(!node) return;
+    node.svgX = padX + (node._x / Math.max(total-1,1)) * (W - 2*padX);
+    node.svgY = padY + node._y * ((H - 2*padY) / Math.max(getDepth(root)-1, 1));
+    mapCoords(node.left);
+    mapCoords(node.right);
+  }
+  function getDepth(n) { return n ? 1+Math.max(getDepth(n.left),getDepth(n.right)) : 0; }
+  mapCoords(root);
+}
+
+function cloneTree(n) {
+  if(!n) return null;
+  return { id:n.id, val:n.val, svgX:n.svgX, svgY:n.svgY, _x:n._x, _y:n._y,
+           left: cloneTree(n.left), right: cloneTree(n.right) };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 1 — INFIX TO POSTFIX
+// ═══════════════════════════════════════════════════════════════
+function buildTab1(expr) {
+  const tid = 0;
+  tabSteps[tid] = [];
+  const tokens = expr.split('').filter(c => c.trim());
+  const opStack = [];
+  const output  = [];
+  const cs = [{fn:'main', args:''}];
+
+  // main
+  snap(tid,{ line:'t1-m1', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'Enter main()', activeFn:'main' });
+  snap(tid,{ line:'t1-m2', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:`infix = "${expr}"`, activeFn:'main' });
+  snap(tid,{ line:'t1-m4', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'Calling infixToPostfix()', activeFn:'main' });
+
+  cs.push({fn:'infixToPostfix', args:`expr="${expr}"`});
+  snap(tid,{ line:'t1-f1', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'Enter infixToPostfix()', activeFn:'infixToPostfix' });
+  snap(tid,{ line:'t1-f2', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'Init operator stack', activeFn:'infixToPostfix' });
+  snap(tid,{ line:'t1-f3', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'i=0, k=0', activeFn:'infixToPostfix' });
+
+  for(let i = 0; i < tokens.length; i++) {
+    const ch = tokens[i];
+    snap(tid,{ line:'t1-f4', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Loop: i=${i}, checking "${ch}"`, activeFn:'infixToPostfix' });
+    snap(tid,{ line:'t1-f5', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`ch = '${ch}'`, activeFn:'infixToPostfix' });
+
+    if(isAlNum(ch)) {
+      snap(tid,{ line:'t1-f6', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`'${ch}' is operand`, activeFn:'infixToPostfix', cond:'true', condMsg:`isalnum('${ch}') → TRUE` });
+      output.push(ch);
+      snap(tid,{ line:'t1-f7', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Operand '${ch}' → output`, activeFn:'infixToPostfix' });
+
+    } else if(ch === '(') {
+      snap(tid,{ line:'t1-f8', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`'${ch}' is '('`, activeFn:'infixToPostfix' });
+      opStack.push(ch);
+      snap(tid,{ line:'t1-f9', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Push '(' onto operator stack`, activeFn:'infixToPostfix' });
+
+    } else if(ch === ')') {
+      snap(tid,{ line:'t1-f10', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`'${ch}' is ')'`, activeFn:'infixToPostfix' });
+      while(opStack.length && opStack[opStack.length-1] !== '(') {
+        snap(tid,{ line:'t1-f11', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`top='${opStack[opStack.length-1]}' ≠ '(', pop to output`, activeFn:'infixToPostfix' });
+        output.push(opStack.pop());
+        snap(tid,{ line:'t1-f12', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Popped to output`, activeFn:'infixToPostfix' });
+      }
+      snap(tid,{ line:'t1-f13', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Discard '('`, activeFn:'infixToPostfix' });
+      opStack.pop();
+
+    } else if(isOp(ch)) {
+      snap(tid,{ line:'t1-f14', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`'${ch}' is operator, prec=${prec(ch)}`, activeFn:'infixToPostfix' });
+
+      // Call precedence for current op
+      cs.push({fn:'precedence', args:`op='${ch}'`});
+      snap(tid,{ line:'t1-pr1', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Check prec('${ch}')`, activeFn:'precedence' });
+      snap(tid,{ line: prec(ch)===3?'t1-pr2':prec(ch)===2?'t1-pr3':'t1-pr4', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`prec('${ch}') = ${prec(ch)}`, activeFn:'precedence' });
+      cs.pop();
+
+      while(opStack.length && opStack[opStack.length-1] !== '(' && prec(opStack[opStack.length-1]) >= prec(ch)) {
+        const top = opStack[opStack.length-1];
+        snap(tid,{ line:'t1-f15', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`prec('${top}')=${prec(top)} ≥ prec('${ch}')=${prec(ch)}, pop '${top}'`, activeFn:'infixToPostfix' });
+        output.push(opStack.pop());
+        snap(tid,{ line:'t1-f17', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Popped '${top}' to output`, activeFn:'infixToPostfix' });
+      }
+      opStack.push(ch);
+      snap(tid,{ line:'t1-f18', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`Pushed '${ch}' onto operator stack`, activeFn:'infixToPostfix' });
+    }
+    snap(tid,{ line:'t1-f20', tokens, cur:i, opStack:[...opStack], output:[...output], stack:[...cs], info:`i++ → ${i+1}`, activeFn:'infixToPostfix' });
+  }
+
+  // flush
+  snap(tid,{ line:'t1-f22', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'Flush remaining operators', activeFn:'infixToPostfix' });
+  while(opStack.length) {
+    output.push(opStack.pop());
+    snap(tid,{ line:'t1-f23', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:`Flushed → output: ${output.join('')}`, activeFn:'infixToPostfix' });
+  }
+  snap(tid,{ line:'t1-f24', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:`result = "${output.join('')}"`, activeFn:'infixToPostfix' });
+  snap(tid,{ line:'t1-f25', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:`Return from infixToPostfix`, activeFn:'infixToPostfix', hlClass:'return-hl' });
+  cs.pop();
+
+  snap(tid,{ line:'t1-m5', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:`postfix = "${output.join('')}"`, activeFn:'main' });
+  snap(tid,{ line:'t1-m6', tokens, cur:-1, opStack:[...opStack], output:[...output], stack:[...cs], info:'return 0', activeFn:'main', hlClass:'return-hl' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 2 — EVALUATE POSTFIX (numeric infix input)
+// ═══════════════════════════════════════════════════════════════
+
+// Tokenize "3+42*(10-5)" → ["3","+","42","*","(","10","-","5",")"]
+function numericTokenize(expr) {
+  const toks = [];
+  let i = 0;
+  while (i < expr.length) {
+    if (expr[i] === ' ') { i++; continue; }
+    if (/[0-9]/.test(expr[i])) {
+      let num = '';
+      while (i < expr.length && /[0-9]/.test(expr[i])) num += expr[i++];
+      toks.push(num);
+    } else {
+      toks.push(expr[i++]);
+    }
+  }
+  return toks;
+}
+
+// Convert token array (strings) infix → postfix token array
+function numericToPostfix(toks) {
+  const stack = [], out = [];
+  for (const t of toks) {
+    if (/^[0-9]+$/.test(t))      { out.push(t); }
+    else if (t === '(')           { stack.push(t); }
+    else if (t === ')') {
+      while (stack.length && stack[stack.length-1] !== '(') out.push(stack.pop());
+      stack.pop();
+    } else if (isOp(t)) {
+      while (stack.length && stack[stack.length-1] !== '(' && prec(stack[stack.length-1]) >= prec(t))
+        out.push(stack.pop());
+      stack.push(t);
+    }
+  }
+  while (stack.length) out.push(stack.pop());
+  return out;
+}
+
+// Parse space-separated postfix string into tokens: "3 4 2 * +" → ["3","4","2","*","+"]
+function parsePostfixInput(raw) {
+  return raw.trim().split(/\s+/).filter(t => t.length > 0);
+}
+
+function buildTab2(postfixExpr) {
+  const tid = 1;
+  tabSteps[tid] = [];
+
+  // Parse space-separated postfix tokens directly
+  const tokens = parsePostfixInput(postfixExpr);
+  const postfixStr = tokens.join(' ');
+
+  // Update C source display
+  const pfEl = document.getElementById('t2-expr-display');
+  if (pfEl) pfEl.textContent = postfixStr;
+  const stack  = [];            // operand stack (numbers)
+  const cs     = [{fn:'main', args:''}];
+
+  // main() steps
+  snap(tid,{ line:'t2-m1',  tokens, cur:-1, evalStack:[...stack], stack:[...cs], info:'Enter main()', activeFn:'main', result:null });
+  snap(tid,{ line:'t2-m2c', tokens, cur:-1, evalStack:[...stack], stack:[...cs], info:`postfix = "${postfixStr}"`, activeFn:'main', result:null });
+  snap(tid,{ line:'t2-m3',  tokens, cur:-1, evalStack:[...stack], stack:[...cs], info:'Calling evalPostfix(postfix)', activeFn:'main', result:null });
+
+  // evalPostfix() entry
+  cs.push({fn:'evalPostfix', args:`expr="${postfixStr}"`});
+  snap(tid,{ line:'t2-f1', tokens, cur:-1, evalStack:[...stack], stack:[...cs], info:'Enter evalPostfix()', activeFn:'evalPostfix', result:null });
+  snap(tid,{ line:'t2-f2', tokens, cur:-1, evalStack:[...stack], stack:[...cs], info:'Init stack s, i = 0', activeFn:'evalPostfix', result:null });
+
+  for (let i = 0; i < tokens.length; i++) {
+    const tok   = tokens[i];
+    const isNum = /^[0-9]+$/.test(tok);
+
+    snap(tid,{ line:'t2-f3', tokens, cur:i, evalStack:[...stack], stack:[...cs],
+      info:`for loop — i=${i}, token = "${tok}"`, activeFn:'evalPostfix', result:null });
+
+    snap(tid,{ line:'t2-f4', tokens, cur:i, evalStack:[...stack], stack:[...cs],
+      info:`isNumber("${tok}") → ${isNum ? 'TRUE — operand' : 'FALSE — operator'}`,
+      activeFn:'evalPostfix', result:null,
+      cond: isNum ? 'true' : 'false',
+      condMsg: `isNumber("${tok}") → ${isNum ? 'TRUE' : 'FALSE'}` });
+
+    if (isNum) {
+      const num = Number(tok);
+      stack.push(num);
+      snap(tid,{ line:'t2-f5', tokens, cur:i, evalStack:[...stack], stack:[...cs],
+        info:`"${tok}" is a number → atof("${tok}") = ${num} → push(${num})`, activeFn:'evalPostfix', result:null });
+
+    } else if (isOp(tok)) {
+      snap(tid,{ line:'t2-f6', tokens, cur:i, evalStack:[...stack], stack:[...cs],
+        info:`"${tok}" is an operator → enter else branch`, activeFn:'evalPostfix', result:null });
+      const b = stack.pop();
+      const a = stack.pop();
+      snap(tid,{ line:'t2-f7', tokens, cur:i, evalStack:[...stack], stack:[...cs],
+        info:`pop b = ${b},  pop a = ${a}  (b was on top)`, activeFn:'evalPostfix', result:null });
+      let res;
+      if      (tok==='+') res = a + b;
+      else if (tok==='-') res = a - b;
+      else if (tok==='*') res = a * b;
+      else if (tok==='/') res = a / b;
+      else if (tok==='^') res = Math.pow(a, b);
+      res = Math.round(res * 1e9) / 1e9;
+      stack.push(res);
+      snap(tid,{ line:'t2-f8', tokens, cur:i, evalStack:[...stack], stack:[...cs],
+        info:`apply(${a}, "${tok}", ${b}) = ${res}  → push(${res})`, activeFn:'evalPostfix', result:null });
+    }
+  }
+
+  const finalResult = stack[stack.length-1];
+  snap(tid,{ line:'t2-f11', tokens, cur:-1, evalStack:[...stack], stack:[...cs],
+    info:`return pop(s) = ${finalResult}`, activeFn:'evalPostfix', result:finalResult, hlClass:'return-hl' });
+  cs.pop();
+  snap(tid,{ line:'t2-m3', tokens, cur:-1, evalStack:[...stack], stack:[...cs],
+    info:`printf → Result: ${finalResult}`, activeFn:'main', result:finalResult });
+  snap(tid,{ line:'t2-m4', tokens, cur:-1, evalStack:[...stack], stack:[...cs],
+    info:'return 0', activeFn:'main', result:finalResult, hlClass:'return-hl' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 3 — BUILD EXPRESSION TREE
+// ═══════════════════════════════════════════════════════════════
+function buildTab3(postfixExpr) {
+  const tid = 2;
+  tabSteps[tid] = [];
+  const tokens = parsePostfixInput(postfixExpr);
+  const postfixStr = tokens.join(' ');
+  const nodeStack = []; // stack of partial tree roots
+  const cs = [{fn:'main',args:''}];
+  NODE_ID = 0;
+
+  // Update C source display
+  const pfEl3 = document.getElementById('t3-expr-display');
+  if(pfEl3) pfEl3.textContent = postfixStr;
+
+  snap(tid,{ line:'t3-m1', tokens, cur:-1, nodeStack:[], tree:null, stack:[...cs], info:'Enter main()', activeFn:'main', active:null });
+  snap(tid,{ line:'t3-m3', tokens, cur:-1, nodeStack:[], tree:null, stack:[...cs], info:'Calling buildTree(postfix)', activeFn:'main', active:null });
+
+  cs.push({fn:'buildTree', args:`postfix="${postfixStr}"`});
+  snap(tid,{ line:'t3-f1', tokens, cur:-1, nodeStack:[], tree:null, stack:[...cs], info:'Enter buildTree()', activeFn:'buildTree', active:null });
+  snap(tid,{ line:'t3-f2', tokens, cur:-1, nodeStack:[], tree:null, stack:[...cs], info:'Init node stack', activeFn:'buildTree', active:null });
+
+  for(let i=0; i<tokens.length; i++) {
+    const ch = tokens[i];
+    snap(tid,{ line:'t3-f4', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`Loop i=${i}, ch='${ch}'`, activeFn:'buildTree', active:null });
+    snap(tid,{ line:'t3-f5', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`ch = '${ch}'`, activeFn:'buildTree', active:ch });
+    snap(tid,{ line:'t3-f6', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`Create node('${ch}')`, activeFn:'buildTree', active:ch });
+
+    const node = mkNode(ch);
+
+    if(!isOp(ch)) {
+      snap(tid,{ line:'t3-f7', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`'${ch}' is operand → leaf`, activeFn:'buildTree', active:ch, cond:'true', condMsg:`isOperand('${ch}') → TRUE` });
+      nodeStack.push(node);
+      const dispTree = nodeStack.length>0 ? cloneTree(nodeStack[nodeStack.length-1]) : null;
+      snap(tid,{ line:'t3-f8', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:dispTree, stack:[...cs], info:`Push leaf '${ch}' → stack has ${nodeStack.length} node(s)`, activeFn:'buildTree', active:ch });
+    } else {
+      snap(tid,{ line:'t3-f9', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`'${ch}' is operator`, activeFn:'buildTree', active:ch });
+      snap(tid,{ line:'t3-f10', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`Pop right child = '${nodeStack[nodeStack.length-1].val}'`, activeFn:'buildTree', active:ch });
+      node.right = nodeStack.pop();
+      snap(tid,{ line:'t3-f11', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`Pop left child = '${nodeStack[nodeStack.length-1].val}'`, activeFn:'buildTree', active:ch });
+      node.left = nodeStack.pop();
+      // Layout full subtree now
+      layoutTree(node);
+      nodeStack.push(node);
+      const dispTree = cloneTree(node);
+      snap(tid,{ line:'t3-f12', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:dispTree, stack:[...cs], info:`Push operator node '${ch}' with children`, activeFn:'buildTree', active:ch });
+    }
+    snap(tid,{ line:'t3-f14', tokens, cur:i, nodeStack:nodeStack.map(n=>n.val), tree:nodeStack[nodeStack.length-1]||null, stack:[...cs], info:`i++ → ${i+1}`, activeFn:'buildTree', active:null });
+  }
+
+  // Final layout of whole tree
+  const root = nodeStack[nodeStack.length-1];
+  if(root) layoutTree(root);
+  const finalTree = root ? cloneTree(root) : null;
+  snap(tid,{ line:'t3-f16', tokens, cur:-1, nodeStack:nodeStack.map(n=>n.val), tree:finalTree, stack:[...cs], info:'Return root of expression tree', activeFn:'buildTree', active:null, hlClass:'return-hl' });
+  cs.pop();
+  snap(tid,{ line:'t3-m3', tokens, cur:-1, nodeStack:[], tree:finalTree, stack:[...cs], info:'Tree built successfully!', activeFn:'main', active:null });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB 4 — TRAVERSALS
+// ═══════════════════════════════════════════════════════════════
+function buildTab4(postfixExpr) {
+  const tid = 3;
+  tabSteps[tid] = [];
+  NODE_ID = 0;
+
+  // Parse space-separated postfix tokens
+  const postfixToks = parsePostfixInput(postfixExpr);
+
+  // Build expression tree from token list
+  function buildExprTreeFromToks(toks) {
+    NODE_ID = 0;
+    const stk = [];
+    for(const t of toks) {
+      const node = mkNode(t);
+      if(isOp(t)) {
+        node.right = stk.pop();
+        node.left  = stk.pop();
+      }
+      stk.push(node);
+    }
+    return stk.pop() || null;
+  }
+
+  const root = buildExprTreeFromToks(postfixToks);
+  if(root) layoutTree(root);
+  const fullTree = root ? cloneTree(root) : null;
+
+  const cs = [{fn:'main', args:''}];
+  const infixOut=[], preOut=[], postOut=[];
+
+  snap(tid,{ line:'t4-m1', tree:fullTree, active:null, printed:[], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'main', phase:'none' });
+  snap(tid,{ line:'t4-m3', tree:fullTree, active:null, printed:[], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'main', phase:'in' });
+
+  // IN-ORDER
+  function goInorder(node) {
+    if(!node) {
+      cs.push({fn:'inorder', args:'r=NULL'});
+      snap(tid,{ line:'t4-in2', tree:fullTree, active:null, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+      cs.pop(); return;
+    }
+    cs.push({fn:'inorder', args:`r='${node.val}'`});
+    snap(tid,{ line:'t4-in2', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+    if(isOp(node.val)) {
+      snap(tid,{ line:'t4-in3', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+      infixOut.push('(');
+    }
+    snap(tid,{ line:'t4-in4', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+    goInorder(node.left);
+    snap(tid,{ line:'t4-in5', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+    infixOut.push(node.val);
+    snap(tid,{ line:'t4-in6', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+    goInorder(node.right);
+    if(isOp(node.val)) {
+      snap(tid,{ line:'t4-in7', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in' });
+      infixOut.push(')');
+    }
+    snap(tid,{ line:'t4-in8', tree:fullTree, active:node.val, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'inorder', phase:'in', hlClass:'return-hl' });
+    cs.pop();
+  }
+  goInorder(root);
+
+  snap(tid,{ line:'t4-m4', tree:fullTree, active:null, printed:[...infixOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'main', phase:'pre' });
+
+  // PRE-ORDER
+  function goPreorder(node) {
+    if(!node) {
+      cs.push({fn:'preorder', args:'r=NULL'});
+      snap(tid,{ line:'t4-pre2', tree:fullTree, active:null, printed:[...preOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'preorder', phase:'pre' });
+      cs.pop(); return;
+    }
+    cs.push({fn:'preorder', args:`r='${node.val}'`});
+    snap(tid,{ line:'t4-pre2', tree:fullTree, active:node.val, printed:[...preOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'preorder', phase:'pre' });
+    snap(tid,{ line:'t4-pre3', tree:fullTree, active:node.val, printed:[...preOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'preorder', phase:'pre' });
+    preOut.push(node.val);
+    snap(tid,{ line:'t4-pre4', tree:fullTree, active:node.val, printed:[...preOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'preorder', phase:'pre' });
+    goPreorder(node.left);
+    snap(tid,{ line:'t4-pre5', tree:fullTree, active:node.val, printed:[...preOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'preorder', phase:'pre' });
+    goPreorder(node.right);
+    snap(tid,{ line:'t4-pre6', tree:fullTree, active:node.val, printed:[...preOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'preorder', phase:'pre', hlClass:'return-hl' });
+    cs.pop();
+  }
+  goPreorder(root);
+
+  snap(tid,{ line:'t4-m5', tree:fullTree, active:null, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'main', phase:'post' });
+
+  // POST-ORDER
+  function goPostorder(node) {
+    if(!node) {
+      cs.push({fn:'postorder', args:'r=NULL'});
+      snap(tid,{ line:'t4-post2', tree:fullTree, active:null, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'postorder', phase:'post' });
+      cs.pop(); return;
+    }
+    cs.push({fn:'postorder', args:`r='${node.val}'`});
+    snap(tid,{ line:'t4-post2', tree:fullTree, active:node.val, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'postorder', phase:'post' });
+    snap(tid,{ line:'t4-post3', tree:fullTree, active:node.val, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'postorder', phase:'post' });
+    goPostorder(node.left);
+    snap(tid,{ line:'t4-post4', tree:fullTree, active:node.val, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'postorder', phase:'post' });
+    goPostorder(node.right);
+    snap(tid,{ line:'t4-post5', tree:fullTree, active:node.val, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'postorder', phase:'post' });
+    postOut.push(node.val);
+    snap(tid,{ line:'t4-post6', tree:fullTree, active:node.val, printed:[...postOut], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'postorder', phase:'post', hlClass:'return-hl' });
+    cs.pop();
+  }
+  goPostorder(root);
+
+  snap(tid,{ line:'t4-m6', tree:fullTree, active:null, printed:[], infixOut:[...infixOut], preOut:[...preOut], postOut:[...postOut], stack:[...cs], activeFn:'main', phase:'done', hlClass:'return-hl' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RUN ALL
+// ═══════════════════════════════════════════════════════════════
+function runAll() {
+  const raw = document.getElementById('exprInput').value.trim();
+  if(!raw) return;
+  currentExpr = raw;
+  document.getElementById('t1-expr-display').textContent = raw;
+  buildTab1(raw);
+  tabIdx[0] = 0;
+  renderTab(0);
+}
+
+// Tab 2 — evaluate postfix entered directly as postfix
+function runEval() {
+  const raw = document.getElementById('evalNumInput').value.trim();
+  if (!raw) return;
+  buildTab2(raw);
+  tabIdx[1] = 0;
+  renderTab(1);
+}
+function loadEval(ex) {
+  document.getElementById('evalNumInput').value = ex;
+  runEval();
+  switchTab(1);
+}
+
+// Tab 3 — build expression tree from postfix input
+function runTree() {
+  const raw = document.getElementById('treePostfixInput').value.trim();
+  if (!raw) return;
+  buildTab3(raw);
+  tabIdx[2] = 0;
+  renderTab(2);
+}
+function loadTree(ex) {
+  document.getElementById('treePostfixInput').value = ex;
+  runTree();
+  switchTab(2);
+}
+
+// Tab 4 — traversals from postfix input
+function runTrav() {
+  const raw = document.getElementById('travPostfixInput').value.trim();
+  if (!raw) return;
+  buildTab4(raw);
+  tabIdx[3] = 0;
+  renderTab(3);
+}
+function loadTrav(ex) {
+  document.getElementById('travPostfixInput').value = ex;
+  runTrav();
+  switchTab(3);
+}
+
+function computePostfix(expr) {
+  const tokens = expr.split('').filter(c=>c.trim());
+  const stack=[], out=[];
+  for(const ch of tokens) {
+    if(isAlNum(ch)) { out.push(ch); }
+    else if(ch==='(') { stack.push(ch); }
+    else if(ch===')') {
+      while(stack.length && stack[stack.length-1]!=='(') out.push(stack.pop());
+      stack.pop();
+    } else if(isOp(ch)) {
+      while(stack.length && stack[stack.length-1]!=='(' && prec(stack[stack.length-1])>=prec(ch)) out.push(stack.pop());
+      stack.push(ch);
+    }
+  }
+  while(stack.length) out.push(stack.pop());
+  return out.join('');
+}
+
+function loadEx(ex) {
+  document.getElementById('exprInput').value = ex;
+  runAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER — Tab 1
+// ═══════════════════════════════════════════════════════════════
+function renderTab1(s) {
+  // Tokens
+  const tape = document.getElementById('t1-tokens');
+  tape.innerHTML = '';
+  s.tokens.forEach((t,i) => {
+    const d = document.createElement('span');
+    const cls = i===s.cur ? 'tok tok-active'
+              : i<(s.cur===-1?s.tokens.length:s.cur) ? 'tok tok-done'
+              : isAlNum(t) ? 'tok tok-num' : t==='('||t===')' ? 'tok tok-paren' : 'tok tok-op';
+    d.className = cls; d.textContent = t;
+    tape.appendChild(d);
+  });
+
+  // Op stack
+  const ops = document.getElementById('t1-opstack');
+  ops.innerHTML = '';
+  s.opStack.forEach((c,i) => {
+    const d = document.createElement('div');
+    d.className = 'op-cell' + (i===s.opStack.length-1 ? ' top' : '');
+    d.textContent = c; ops.appendChild(d);
+  });
+  if(!s.opStack.length) ops.innerHTML = '<span style="color:#b0bcd8;font-size:10px">empty</span>';
+
+  // Output
+  const out = document.getElementById('t1-output');
+  out.innerHTML = '';
+  s.output.forEach(c => {
+    const d = document.createElement('div'); d.className='out-cell'; d.textContent=c; out.appendChild(d);
+  });
+  if(!s.output.length) out.innerHTML = '<span style="color:#b0bcd8;font-size:10px">empty</span>';
+
+  // Info
+  document.getElementById('t1-info').innerHTML = `<b>Action:</b> ${s.info}`;
+
+  // Cond
+  const cond = document.getElementById('t1-cond');
+  if(s.cond) {
+    cond.className='cond-bar active';
+    cond.innerHTML = `<span style="color:#7a8bb0;font-size:9px">${s.condMsg}</span>`;
+  } else {
+    cond.className='cond-bar'; cond.innerHTML='';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER — Tab 2
+// ═══════════════════════════════════════════════════════════════
+function renderTab2(s) {
+  const tape = document.getElementById('t2-tokens');
+  tape.innerHTML = '';
+  s.tokens.forEach((t,i) => {
+    const d = document.createElement('span');
+    const isNum = /^[0-9]+$/.test(String(t));
+    const cls = i===s.cur ? 'tok tok-active'
+              : i < (s.cur===-1 ? s.tokens.length : s.cur) ? 'tok tok-done'
+              : isNum ? 'tok tok-num' : 'tok tok-op';
+    d.className = cls;
+    d.textContent = t;
+    tape.appendChild(d);
+  });
+
+  const es = document.getElementById('t2-evalstack');
+  es.innerHTML = '';
+  [...s.evalStack].reverse().forEach((v,i) => {
+    const d = document.createElement('div');
+    d.className = 'eval-cell' + (i===0 ? ' top' : '');
+    // Show integers cleanly, floats up to 6 sig figs
+    const disp = Number.isInteger(v) ? String(v) : parseFloat(v.toPrecision(6)).toString();
+    d.textContent = disp;
+    es.appendChild(d);
+  });
+  if (!s.evalStack.length) es.innerHTML = '<span style="color:#b0bcd8;font-size:10px">empty</span>';
+
+  document.getElementById('t2-info').innerHTML = `<b>Action:</b> ${s.info}`;
+
+  const rb = document.getElementById('t2-result');
+  if (s.result !== null && s.result !== undefined) {
+    const disp = Number.isInteger(s.result) ? String(s.result) : parseFloat(s.result.toPrecision(10)).toString();
+    rb.className = 'result-banner';
+    rb.textContent = `✓  Result = ${disp}`;
+  } else {
+    rb.className = 'result-banner info';
+    rb.textContent = 'Evaluation result appears here';
+  }
+
+  const cond = document.getElementById('t2-cond');
+  if (s.cond) { cond.className='cond-bar active'; cond.innerHTML=`<span style="color:#7a8bb0;font-size:9px">${s.condMsg}</span>`; }
+  else { cond.className='cond-bar'; cond.innerHTML=''; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER — Tab 3
+// ═══════════════════════════════════════════════════════════════
+function renderTab3(s) {
+  // SVG tree
+  const lG = document.getElementById('t3-links');
+  const nG = document.getElementById('t3-nodes');
+  lG.innerHTML=''; nG.innerHTML='';
+  if(s.tree) {
+    layoutTree(s.tree);
+    drawExprTree(s.tree, s.active, lG, nG, 'tab2');
+  }
+
+  const rb3 = document.getElementById('t3-result');
+  rb3.textContent = s.info;
+
+  // Node stack (right panel)
+  const sw = document.getElementById('t3-stack');
+  sw.innerHTML='';
+  if(s.nodeStack && s.nodeStack.length) {
+    [...s.nodeStack].reverse().forEach((v,i) => {
+      const d=document.createElement('div'); d.className='sf';
+      const pal = isOp(v) ? FN_PAL.buildTree : FN_PAL.main;
+      d.style.cssText=`background:${pal.bg};border:1px solid ${i===0?pal.border:pal.border+'66'};${i===0?`box-shadow:0 0 0 2px ${pal.border}33`:''};`;
+      d.innerHTML=`<div class="sf-name" style="color:${pal.text}">node('${v}')</div>`;
+      sw.appendChild(d);
+    });
+  } else {
+    sw.innerHTML='<div style="color:#b0bcd8;font-size:10px;text-align:center;padding:16px">empty</div>';
+  }
+
+  const cond = document.getElementById('t3-cond');
+  if(s.cond){ cond.className='cond-bar active'; cond.innerHTML=`<span style="color:#7a8bb0;font-size:9px">${s.condMsg}</span>`; }
+  else { cond.className='cond-bar'; cond.innerHTML=''; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER — Tab 4
+// ═══════════════════════════════════════════════════════════════
+function renderTab4(s) {
+  const lG = document.getElementById('t4-links');
+  const nG = document.getElementById('t4-nodes');
+  lG.innerHTML=''; nG.innerHTML='';
+  if(s.tree) {
+    layoutTree(s.tree);
+    drawExprTree(s.tree, s.active, lG, nG, 'tab3');
+  }
+
+  // Update traversal rows
+  const phaseColor = { in:'#2563eb', pre:'#10b981', post:'#f97316', done:'#1e2a45', none:'#7a8bb0' };
+  const col = phaseColor[s.phase] || '#7a8bb0';
+
+  // Infix: brackets are already in the array; join smartly (no space around parens)
+  function formatInfix(arr) {
+    if(!arr.length) return '—';
+    let s = '';
+    for(let i=0; i<arr.length; i++) {
+      const t = arr[i], prev = arr[i-1];
+      if(t==='(') { s += t; }
+      else if(t===')') { s += t; }
+      else if(prev && prev !== '(') { s += ' ' + t; }
+      else { s += t; }
+    }
+    return s;
+  }
+  document.getElementById('t4-infix').textContent  = formatInfix(s.infixOut);
+  document.getElementById('t4-prefix').textContent = s.preOut.length  ? s.preOut.join(' ')  : '—';
+  document.getElementById('t4-postfix').textContent= s.postOut.length ? s.postOut.join(' ') : '—';
+
+  // Highlight active traversal row
+  document.getElementById('t4-infix-row').style.borderColor  = s.phase==='in'   ? '#2563eb' : '#d0d9ee';
+  document.getElementById('t4-prefix-row').style.borderColor = s.phase==='pre'  ? '#10b981' : '#d0d9ee';
+  document.getElementById('t4-postfix-row').style.borderColor= s.phase==='post' ? '#f97316' : '#d0d9ee';
+
+  const cond = document.getElementById('t4-cond');
+  if(s.cond){ cond.className='cond-bar active'; cond.innerHTML=`<span style="color:#7a8bb0;font-size:9px">${s.condMsg}</span>`; }
+  else { cond.className='cond-bar'; cond.innerHTML=''; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAW EXPRESSION TREE (SVG)
+// ═══════════════════════════════════════════════════════════════
+function drawExprTree(node, activeVal, lG, nG, tabId) {
+  if(!node) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const R = 20;
+
+  // Draw links first
+  function drawLinks(n) {
+    if(!n) return;
+    if(n.left)  { drawSvgLine(n.svgX, n.svgY, n.left.svgX,  n.left.svgY,  lG, ns); drawLinks(n.left); }
+    if(n.right) { drawSvgLine(n.svgX, n.svgY, n.right.svgX, n.right.svgY, lG, ns); drawLinks(n.right); }
+  }
+  drawLinks(node);
+
+  // Draw nodes
+  function drawNode(n) {
+    if(!n) return;
+    drawNode(n.left); drawNode(n.right);
+    const isActive = n.val === activeVal;
+    const isOpr = isOp(n.val);
+    const g = document.createElementNS(ns,'g');
+
+    const fillColor  = isActive ? '#dbeafe' : isOpr ? '#f5f3ff' : '#f0fdf4';
+    const strokeColor= isActive ? '#2563eb' : isOpr ? '#7c3aed' : '#22c55e';
+    const textColor  = isActive ? '#1d4ed8' : isOpr ? '#6d28d9' : '#15803d';
+
+    const circle = document.createElementNS(ns,'circle');
+    circle.setAttribute('cx', n.svgX); circle.setAttribute('cy', n.svgY); circle.setAttribute('r', R);
+    circle.setAttribute('fill', fillColor); circle.setAttribute('stroke', strokeColor); circle.setAttribute('stroke-width', isActive?'2.5':'1.5');
+    if(isActive) circle.setAttribute('filter','drop-shadow(0 0 5px rgba(37,99,235,0.4))');
+    g.appendChild(circle);
+
+    const txt = document.createElementNS(ns,'text');
+    txt.setAttribute('x', n.svgX); txt.setAttribute('y', n.svgY);
+    txt.setAttribute('text-anchor','middle'); txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('font-size','14'); txt.setAttribute('font-weight','700');
+    txt.setAttribute('fill', textColor); txt.setAttribute('font-family','JetBrains Mono, monospace');
+    txt.textContent = n.val;
+    g.appendChild(txt);
+
+    nG.appendChild(g);
+  }
+  drawNode(node);
+}
+
+function drawSvgLine(x1,y1,x2,y2,lG,ns) {
+  const l=document.createElementNS(ns,'line');
+  l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+  l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+  l.setAttribute('stroke','#c7d2fe'); l.setAttribute('stroke-width','1.5');
+  lG.appendChild(l);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALL STACK RENDERER
+// ═══════════════════════════════════════════════════════════════
+function getFnColours(stack) {
+  const fnCount={};
+  return stack.map(f => {
+    fnCount[f.fn]=(fnCount[f.fn]||0);
+    const occ=fnCount[f.fn]; fnCount[f.fn]++;
+    const base=FN_PAL[f.fn]||FN_PAL_FB;
+    if(occ===0) return {...base, occ};
+    // shift hue slightly for recursive calls
+    return { bg:base.bg, border:shiftHex(base.border, occ*35), text:base.text, occ };
+  });
+}
+
+function shiftHex(hex, deg) {
+  let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  let max=Math.max(r,g,b), min=Math.min(r,g,b), h,s,l=(max+min)/2;
+  if(max===min){h=s=0;}else{
+    const d=max-min; s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}
+    h/=6;
+  }
+  h=(h+deg/360)%1;
+  const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+  const q2=l<0.5?l*(1+s):l+s-l*s, p2=2*l-q2;
+  const rr=Math.round(hue2rgb(p2,q2,h+1/3)*255), gg=Math.round(hue2rgb(p2,q2,h)*255), bb=Math.round(hue2rgb(p2,q2,h-1/3)*255);
+  return '#'+[rr,gg,bb].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+function renderStack(stack, el) {
+  el.innerHTML='';
+  if(!stack||!stack.length){ el.innerHTML='<div style="color:#b0bcd8;font-size:10px;text-align:center;padding:16px">empty</div>'; return; }
+  const cols=getFnColours(stack);
+  stack.forEach((f,i) => {
+    const isTop=i===stack.length-1;
+    const col=cols[i];
+    const d=document.createElement('div'); d.className='sf';
+    d.style.cssText=`background:${col.bg};border:1px solid ${isTop?col.border:col.border+'66'};${isTop?`box-shadow:0 0 0 2px ${col.border}33`:''}`;
+    const badge=col.occ>0?`<span style="display:inline-block;margin-left:4px;background:${col.border};color:#fff;border-radius:8px;font-size:7px;padding:0 4px">#${col.occ+1}</span>`:'';
+    d.innerHTML=`<div class="sf-name" style="color:${col.text}">${f.fn}()${badge}</div>
+                 <div class="sf-args">${f.args||'&nbsp;'}</div>
+                 ${isTop?`<span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:8px;color:${col.border};font-weight:700">◀ SP</span>`:''}`;
+    el.appendChild(d);
+  });
+  el.scrollTop=el.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN RENDER DISPATCHER
+// ═══════════════════════════════════════════════════════════════
+const TAB_PREFIXES = ['t1','t2','t3','t4'];
+
+function renderTab(tid) {
+  if(!tabSteps[tid].length) return;
+  const idx = Math.max(0, Math.min(tabIdx[tid], tabSteps[tid].length-1));
+  const s = tabSteps[tid][idx];
+  const pfx = TAB_PREFIXES[tid];
+
+  // Clear highlights
+  const ALL_HL=['hl','return-hl','fn-bg-main','fn-bg-infixToPostfix','fn-bg-evalPostfix',
+    'fn-bg-buildTree','fn-bg-inorder','fn-bg-preorder','fn-bg-postorder','fn-bg-precedence','fn-bg-isOperator'];
+  document.querySelectorAll(`#tab${tid} .line`).forEach(l => {
+    l.classList.remove(...ALL_HL);
+    l.style.borderLeftColor=''; l.style.background=''; l.style.fontWeight='';
+  });
+
+  // Function bg tint
+  if(s.activeFn && FN_BG_MAP[s.activeFn]) {
+    const pal=FN_PAL[s.activeFn]||FN_PAL_FB;
+    document.querySelectorAll(`#tab${tid} .line[data-fn="${s.activeFn}"]`).forEach(l => {
+      l.classList.add(FN_BG_MAP[s.activeFn]);
+      l.style.borderLeftColor=pal.border+'88';
+    });
+  }
+
+  // Active line
+  const topPal = (() => {
+    if(!s.stack||!s.stack.length) return FN_PAL_FB;
+    const cols=getFnColours(s.stack);
+    return cols[s.stack.length-1];
+  })();
+  const el=document.getElementById(s.line);
+  if(el) {
+    if(s.hlClass) {
+      el.classList.add(s.hlClass);
+    } else {
+      el.classList.add('hl');
+      el.style.borderLeftColor=topPal.border;
+      el.style.background=topPal.bg.replace ? topPal.bg : topPal.bg;
+      el.style.fontWeight='700';
+    }
+    el.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+
+  // Tab-specific rendering
+  if(tid===0) renderTab1(s);
+  else if(tid===1) renderTab2(s);
+  else if(tid===2) renderTab3(s);
+  else if(tid===3) renderTab4(s);
+
+  // Call stack
+  renderStack(s.stack, document.getElementById(`${pfx}-stack`));
+
+  // Step badge + button states
+  document.getElementById(`${pfx}-sn`).textContent = idx+1;
+  document.getElementById(`${pfx}-st`).textContent = tabSteps[tid].length;
+  document.getElementById(`${pfx}-nbtn`).disabled = idx>=tabSteps[tid].length-1;
+  document.getElementById(`${pfx}-pbtn`).disabled = idx<=0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════
+function stepTab(tid) { if(tabIdx[tid]<tabSteps[tid].length-1){ tabIdx[tid]++; renderTab(tid); } }
+function prevTab(tid) { if(tabIdx[tid]>0){ tabIdx[tid]--; renderTab(tid); } }
+function resetTab(tid){ tabIdx[tid]=0; renderTab(tid); }
+
+function zoomCode(tid, delta) {
+  tabZoom[tid]=Math.max(0.5,Math.min(2.5,tabZoom[tid]+delta));
+  const cs=document.querySelectorAll('.code-scroll');
+  if(cs[tid]) cs[tid].style.fontSize=(tabZoom[tid]*100)+'%';
+  document.getElementById(`${TAB_PREFIXES[tid]}-zoom`).textContent=Math.round(tabZoom[tid]*100)+'%';
+}
+
+function switchTab(i) {
+  document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  activeTab=i;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAGGABLE PANEL RESIZE
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  // Map: gridId → { el, varName, cols[] }
+  const GRIDS = {
+    tab0: { varName:'--col3', cols:[1, 1.1, 0.85] },
+    tab1: { varName:'--col3', cols:[1, 1.1, 0.85] },
+    tab2: { varName:'--colt', cols:[1.2, 1, 0.8]  },
+    tab3: { varName:'--colt', cols:[1.2, 1, 0.8]  },
+  };
+
+  // Convert fr ratios → pixel widths given total container width
+  function frsToPx(cols, totalW) {
+    const total = cols.reduce((a,b)=>a+b,0);
+    return cols.map(f => f/total * totalW);
+  }
+
+  // Convert pixel widths → fr string
+  function pxToFrs(pxArr, totalW) {
+    return pxArr.map(px => (px/totalW).toFixed(4)+'fr').join(' ');
+  }
+
+  let drag = null; // { handle, gridId, colIdx, gridEl, startX, startPx[] }
+
+  document.addEventListener('mousedown', e => {
+    const h = e.target.closest('.resize-handle');
+    if(!h) return;
+    e.preventDefault();
+    const gridId = h.dataset.grid;
+    const colIdx = parseInt(h.dataset.col);
+    const gridEl = document.getElementById(gridId)?.querySelector('.content-grid');
+    if(!gridEl) return;
+
+    const totalW = gridEl.offsetWidth;
+    const state  = GRIDS[gridId];
+    const startPx = frsToPx(state.cols, totalW);
+
+    h.classList.add('dragging');
+    drag = { h, gridId, colIdx, gridEl, startX: e.clientX, startPx:[...startPx], totalW, state };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if(!drag) return;
+    const dx = e.clientX - drag.startX;
+    const minPx = 120; // minimum panel width
+    const px = [...drag.startPx];
+    const ci = drag.colIdx;
+
+    px[ci]   = Math.max(minPx, drag.startPx[ci] + dx);
+    px[ci+1] = Math.max(minPx, drag.startPx[ci+1] - dx);
+
+    // Don't let combined width drift; clamp
+    const cap = drag.startPx[ci] + drag.startPx[ci+1];
+    if(px[ci] + px[ci+1] !== cap) {
+      px[ci+1] = Math.max(minPx, cap - px[ci]);
+      px[ci]   = Math.max(minPx, cap - px[ci+1]);
+    }
+
+    drag.state.cols = px.map(p => p / drag.totalW * 10); // keep relative
+    drag.gridEl.style.setProperty('grid-template-columns', pxToFrs(px, drag.totalW));
+  });
+
+  document.addEventListener('mouseup', () => {
+    if(!drag) return;
+    drag.h.classList.remove('dragging');
+    drag = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// INIT — seed each tab independently
+// ═══════════════════════════════════════════════════════════════
+runAll();   // Tab 1: infix → postfix
+runEval();  // Tab 2: evaluate postfix
+runTree();  // Tab 3: build expression tree
+runTrav();  // Tab 4: tree traversals
+</script>
+</body>
+</html>

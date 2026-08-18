@@ -23,7 +23,7 @@ repository               : "vijay-iiitdm-kanchi/vijay-iiitdm-kanchi.github.io"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "profile.jpg"
+  avatar           : "profile.JPG"
   name             : "Dr Vijaya Kumar S"
   pronouns         : # example: "she/her"  
   bio              : "Assistant Professor, CSE. Embedded AI, cyber-physical systems, and real-time systems."

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS3006 L3-L4 - Datatypes, Strings &amp; Collections</title>
+<script src="./pyodide/pyodide.js"></script>
+<style>
+:root{--blue:#214B8C;--blue-soft:#e8eef8;--ink:#12233f;--muted:#5a6b82;--ok:#1a7f37;--code:#0d1b2a;--amber:#c77700;--violet:#5b3aa8;}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#f4f6fb;height:100vh;overflow:hidden;}
+.stage{height:100vh;display:flex;flex-direction:column;max-width:1200px;margin:0 auto;padding:0 28px;}
+.top{display:flex;align-items:center;gap:16px;padding:14px 0 6px;}
+.brand{font-weight:800;color:var(--blue);font-size:20px}
+.brand small{display:block;font-weight:600;color:var(--muted);font-size:12px}
+.spacer{flex:1}.count{font-weight:700;color:var(--blue);font-size:17px}
+.pybar{font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:var(--blue-soft);color:var(--blue);}
+.pybar.ready{background:#e6f4ea;color:var(--ok)}.pybar.warn{background:#fff3e0;color:var(--amber)}
+.dots{display:flex;gap:4px;flex-wrap:wrap;padding:2px 0 8px}
+.dot{width:9px;height:9px;border-radius:50%;background:#cdd7e6;cursor:pointer;transition:.15s}
+.dot.section{border-radius:2px;background:#9db2d4}.dot.content{background:#bcd0ee}
+.dot.done{background:var(--blue)}.dot.here{background:var(--amber);transform:scale(1.4)}
+.card{flex:1;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(20,40,80,.10);padding:26px 30px;display:flex;flex-direction:column;overflow:auto;border:1px solid #e4e9f2;}
+.card.section-card{align-items:flex-start;justify-content:center;background:linear-gradient(135deg,#214B8C,#2d63b8);color:#fff;border:none}
+.section-kicker{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.85}
+.section-title{font-size:52px;font-weight:800;margin:6px 0 4px;line-height:1.05}
+.section-sub{font-size:22px;font-weight:500;opacity:.9}
+.content-title{font-size:30px;font-weight:800;color:var(--blue);margin:0 0 14px}
+.content-bullets{list-style:none;padding:0;margin:0 0 16px}
+.content-bullets li{font-size:22px;line-height:1.5;margin:0 0 12px;padding-left:26px;position:relative}
+.content-bullets li:before{content:"\25B8";color:var(--blue);position:absolute;left:0;top:1px}
+.chips{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.chip{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:4px 10px;border-radius:20px;}
+.chip.predict{background:var(--blue-soft);color:var(--blue)}.chip.mcq{background:#efe7fb;color:var(--violet)}
+.chip.topic{background:#eef2f7;color:var(--muted)}
+.prompt{font-size:22px;font-weight:700;margin:2px 0 14px}
+pre.code{background:var(--code);color:#eaf0fb;border-radius:12px;padding:20px 22px;font-size:24px;line-height:1.45;margin:0 0 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:auto;white-space:pre;}
+.opts{display:grid;gap:10px;margin:4px 0 8px}
+.opt{display:flex;gap:12px;align-items:flex-start;border:2px solid #e0e6ef;border-radius:12px;padding:12px 16px;font-size:20px;cursor:pointer;transition:.12s;background:#fbfcfe;}
+.opt:hover{border-color:var(--blue)}.opt .k{font-weight:800;color:var(--blue);min-width:24px}
+.opt.correct{border-color:var(--ok);background:#eafbef}.opt.correct .k{color:var(--ok)}
+.output{margin-top:auto;border-radius:12px;overflow:hidden;border:1px solid #e4e9f2;}
+.output .lbl{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:6px 14px;background:#eef2f7;color:var(--muted);}
+.output pre{margin:0;padding:14px 18px;font-size:22px;line-height:1.4;background:#0d1b2a;color:#8ef0a5;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;min-height:10px;}
+.output pre.err{color:#ff8f87}
+.reveal{margin-top:14px;border-left:6px solid var(--ok);background:#f2fbf5;border-radius:10px;padding:14px 18px;display:none;}
+.reveal.show{display:block}.reveal .ans{font-size:24px;font-weight:800;color:var(--ok);margin-bottom:4px}.reveal .why{font-size:18px;color:#33475b}
+.controls{display:flex;gap:12px;align-items:center;padding:12px 0 16px}
+.btn{border:none;border-radius:12px;padding:13px 20px;font-size:17px;font-weight:700;cursor:pointer;transition:.12s;}
+.btn.run{background:var(--blue);color:#fff}.btn.run:hover{background:#1a3c73}.btn.run:disabled{background:#9fb0cc;cursor:not-allowed}
+.btn.reveal-btn{background:var(--ok);color:#fff}.btn.reveal-btn:hover{background:#146029}
+.btn.scratch{background:var(--violet);color:#fff}.btn.scratch:hover{background:#472e86}
+.btn.nav{background:#e4e9f2;color:var(--ink)}.btn.nav:hover{background:#d3dbe8}
+.keys{margin-left:auto;font-size:13px;color:var(--muted)}
+.keys kbd{background:#fff;border:1px solid #cdd7e6;border-bottom-width:2px;border-radius:6px;padding:2px 7px;font-size:12px;font-weight:700;color:var(--blue);margin:0 2px;}
+.scrim{position:fixed;inset:0;background:rgba(12,27,42,.55);display:none;z-index:50;align-items:center;justify-content:center;}
+.scrim.show{display:flex}
+.pad{width:min(1000px,92vw);height:min(80vh,720px);background:#0d1b2a;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden;}
+.pad-head{display:flex;align-items:center;gap:12px;padding:12px 18px;background:#12233f;color:#eaf0fb}
+.pad-head b{font-size:16px}.pad-head .hint{font-size:12px;color:#9db2d4;margin-left:auto}
+.pad textarea{flex:1;border:none;outline:none;resize:none;background:#0d1b2a;color:#eaf0fb;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:20px;line-height:1.5;padding:16px 18px;}
+.pad-bar{display:flex;gap:10px;align-items:center;padding:10px 16px;background:#12233f}
+.pad-out{background:#081018;color:#8ef0a5;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:18px;white-space:pre-wrap;padding:12px 18px;max-height:34%;overflow:auto;border-top:1px solid #1e3252}
+.pad-out.err{color:#ff8f87}.pad .btn{padding:10px 18px;font-size:15px}.pad .btn.close{background:#39516f;color:#fff;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="top">
+    <div class="brand">CS3006 &middot; Lecture 3&ndash;4
+      <small>Everything is an Object &middot; Datatypes &rarr; Strings &rarr; Collections &middot; IIITDM Kancheepuram</small>
+    </div>
+    <div class="spacer"></div>
+    <div id="pybar" class="pybar">Loading Python runtime…</div>
+    <div class="count" id="count">1 / 74</div>
+  </div>
+  <div class="dots" id="dots"></div>
+  <div class="card" id="card"></div>
+  <div class="controls">
+    <button class="btn nav" id="prevBtn">&larr; Prev</button>
+    <button class="btn run" id="runBtn">&#9654; Run (R)</button>
+    <button class="btn reveal-btn" id="revealBtn">Reveal (A)</button>
+    <button class="btn scratch" id="scratchBtn">&#9998; Scratchpad (S)</button>
+    <button class="btn nav" id="nextBtn">Next &rarr;</button>
+    <span class="keys"><kbd>Space</kbd>/<kbd>&rarr;</kbd> next &middot; <kbd>&larr;</kbd> prev &middot; <kbd>R</kbd> run &middot; <kbd>A</kbd> reveal &middot; <kbd>S</kbd> scratch</span>
+  </div>
+</div>
+<div class="scrim" id="scrim">
+  <div class="pad">
+    <div class="pad-head"><b>Live Python scratchpad</b><span class="hint">Ctrl/Cmd+Enter to run &middot; Tab indents &middot; Esc closes</span></div>
+    <textarea id="padText" spellcheck="false"></textarea>
+    <div class="pad-out" id="padOut"></div>
+    <div class="pad-bar"><button class="btn run" id="padRun">&#9654; Run</button><button class="btn close" id="padClose">Close (Esc)</button></div>
+  </div>
+</div>
+<script>
+const DECK = [{"type": "section", "title": "Everything is an Object", "subtitle": "The one big idea that explains all the surprises", "i": 0}, {"type": "content", "title": "Every value has a type", "bullets": ["A data type is simply WHAT KIND of thing a value is.", "Python always knows the type; type() tells you.", "Notice it says 'class' — a number belongs to a class. Hold that thought."], "code": "type(42)       # <class 'int'>\ntype(3.14)     # <class 'float'>\ntype(\"data\")   # <class 'str'>\ntype(True)     # <class 'bool'>\ntype(None)     # <class 'NoneType'>", "i": 1, "run": "type(42)       # <class 'int'>\ntype(3.14)     # <class 'float'>\ntype(\"data\")   # <class 'str'>\ntype(True)     # <class 'bool'>\ntype(None)     # <class 'NoneType'>"}, {"type": "predict", "topic": "type()", "prompt": "What is printed?", "code": "print(type(3.14))", "run": "print(type(3.14))", "expect": "<class 'float'>", "why": "3.14 is a floating-point number — its type is float.", "i": 2}, {"type": "content", "title": "None — the type for 'nothing'", "bullets": ["None is Python's object for 'there is no value here'.", "There is only ONE None in the whole program.", "It is NOT the same as 0 or False or \"\"."], "code": "a = None\nb = None\na is b       # True  -- literally the same object\n0 == None    # False -- \"nothing\" is not zero\n\"\" == None   # False -- nor an empty text", "i": 3, "run": "a = None\nb = None\na is b       # True  -- literally the same object\n0 == None    # False -- \"nothing\" is not zero\n\"\" == None   # False -- nor an empty text"}, {"type": "predict", "topic": "None", "prompt": "True or False?", "code": "a = None\nb = None\nprint(a is b)", "run": "a = None\nb = None\nprint(a is b)", "expect": "True", "why": "There is only one None object; both names point to it.", "i": 4}, {"type": "mcq", "topic": "None vs 0", "prompt": "Why does a data scientist care that None != 0?", "code": "reading = None   # sensor gave no value", "options": ["They are the same, so it doesn't matter", "A MISSING reading is different from a measured value of 0", "None is faster than 0", "0 cannot be stored in a list"], "answer": 1, "expect": "A MISSING reading is different from a measured value of 0", "why": "Mixing 'missing' with 'zero' quietly ruins results — central to Data Cleaning.", "i": 5, "run": "reading = None   # sensor gave no value"}, {"type": "content", "title": "What is hidden inside a value?", "bullets": ["Because every value is an object, it carries its own tools (methods).", "dir(value) shows everything it can do.", "Filter out the underscore names to see the everyday tools."], "code": "print(dir(\"data\"))   # dozens of tools inside a string\n[m for m in dir(\"data\") if not m.startswith(\"_\")]\n# upper, lower, split, strip, replace, ...", "i": 6, "run": "print(dir(\"data\"))   # dozens of tools inside a string\n[m for m in dir(\"data\") if not m.startswith(\"_\")]\n# upper, lower, split, strip, replace, ..."}, {"type": "content", "title": "Surprise: '+' is really a method call", "bullets": ["The __add__, __len__ ... names are the machinery.", "When you use + or len(), Python quietly calls them.", "So + was never magic — it's a method hiding in plain sight."], "code": "(2).__add__(3)     # 5  -- exactly what 2 + 3 does\n\"data\".__len__()   # 4  -- exactly what len(\"data\") does\n\"data\".upper()     # 'DATA'", "i": 7, "run": "(2).__add__(3)     # 5  -- exactly what 2 + 3 does\n\"data\".__len__()   # 4  -- exactly what len(\"data\") does\n\"data\".upper()     # 'DATA'"}, {"type": "predict", "topic": "operators", "prompt": "What does this print?", "code": "print((2).__add__(3))", "run": "print((2).__add__(3))", "expect": "5", "why": "+ is syntactic sugar for __add__; 2 + 3 calls exactly this.", "i": 8}, {"type": "section", "title": "Types & Identity", "subtitle": "The full menu, and id() — an object's address", "i": 9}, {"type": "content", "title": "The full menu of built-in types", "bullets": ["Numeric: int, float, bool — cannot change (immutable).", "Text: str — immutable. Sequences: list (mutable), tuple, range.", "set (mutable, unique), dict (mutable, key->value)."], "code": "int   42          # immutable\nfloat 3.14        # immutable\nstr   \"data\"      # immutable\nlist  [1, 2, 3]   # MUTABLE\ntuple (1, 2, 3)   # immutable\nset   {1, 2, 3}   # MUTABLE\ndict  {\"a\": 1}    # MUTABLE", "i": 10, "run": "int   42          # immutable\nfloat 3.14        # immutable\nstr   \"data\"      # immutable\nlist  [1, 2, 3]   # MUTABLE\ntuple (1, 2, 3)   # immutable\nset   {1, 2, 3}   # MUTABLE\ndict  {\"a\": 1}    # MUTABLE"}, {"type": "content", "title": "A tool: id() — an object's address", "bullets": ["Every object lives somewhere in memory; id() gives that location.", "Same id  =>  the exact same object.", "We'll watch this address to see if 'changing' a value edits it or makes a new one."], "code": "x = 10\nid(x)            # some big number (x's address)\ny = 10\nid(y) == id(x)   # True -- both names point to the same 10", "i": 11, "run": "x = 10\nid(x)            # some big number (x's address)\ny = 10\nid(y) == id(x)   # True -- both names point to the same 10"}, {"type": "section", "title": "Mutable vs Immutable", "subtitle": "The spine: watch the address change (or not)", "i": 12}, {"type": "content", "title": "Immutable: a number can never be edited", "bullets": ["int, float, bool are immutable.", "x = x + 1 does NOT change 10 — it makes a new 11 and repoints x.", "The address changes: proof it's a new object."], "code": "x = 10\nid(x)        # note this address\nx = x + 1    # looks like we \"changed\" x\nx            # 11\nid(x)        # DIFFERENT address -- a NEW object!", "i": 13, "run": "x = 10\nid(x)        # note this address\nx = x + 1    # looks like we \"changed\" x\nx            # 11\nid(x)        # DIFFERENT address -- a NEW object!"}, {"type": "predict", "topic": "int immutability", "prompt": "Predict True or False.", "code": "x = 10\nbefore = id(x)\nx = x + 1\nprint(id(x) == before)", "run": "x = 10\nbefore = id(x)\nx = x + 1\nprint(id(x) == before)", "expect": "False", "why": "x+1 builds a new object and repoints x — the old 10 was untouched.", "i": 14}, {"type": "content", "title": "Mutable: a list changes in place", "bullets": ["A list is mutable — editing modifies the SAME object.", "The address stays the same after append().", "One line: immutable => new address; mutable => same address."], "code": "nums = [1, 2, 3]\nid(nums)        # note this address\nnums.append(4)\nnums            # [1, 2, 3, 4]\nid(nums)        # SAME address -- same object, now changed!", "i": 15, "run": "nums = [1, 2, 3]\nid(nums)        # note this address\nnums.append(4)\nnums            # [1, 2, 3, 4]\nid(nums)        # SAME address -- same object, now changed!"}, {"type": "predict", "topic": "list in place", "prompt": "Predict True or False.", "code": "nums = [1, 2, 3]\nbefore = id(nums)\nnums.append(4)\nprint(id(nums) == before)", "run": "nums = [1, 2, 3]\nbefore = id(nums)\nnums.append(4)\nprint(id(nums) == before)", "expect": "True", "why": "append edits the same list object in place — the address is unchanged.", "i": 16}, {"type": "section", "title": "Strings", "subtitle": "Text as an object", "i": 17}, {"type": "content", "title": "A string is an object", "bullets": ["A string carries data + methods, like every value.", "A variable is a label bound to that object.", "len() asks its length; .upper() asks it to transform itself (returns a NEW string)."], "code": "name = \"Ada Lovelace\"\nlen(name)       # 12\nname.upper()    # 'ADA LOVELACE'\nname            # 'Ada Lovelace'  (unchanged!)", "i": 18, "run": "name = \"Ada Lovelace\"\nlen(name)       # 12\nname.upper()    # 'ADA LOVELACE'\nname            # 'Ada Lovelace'  (unchanged!)"}, {"type": "predict", "topic": "str methods", "prompt": "After this, what is name?", "code": "name = \"Ada Lovelace\"\nname.upper()\nprint(name)", "run": "name = \"Ada Lovelace\"\nname.upper()\nprint(name)", "expect": "Ada Lovelace", "why": "upper() returns a NEW string; name is unchanged — strings are immutable.", "i": 19}, {"type": "mcq", "topic": "str is object", "prompt": "Which is TRUE about s.upper()?", "code": "s = \"hello\"\ns.upper()", "options": ["It changes s in place", "It returns a NEW string and leaves s unchanged", "It raises an error", "It only works on numbers"], "answer": 1, "expect": "It returns a NEW string and leaves s unchanged", "why": "Strings are immutable. To keep the result you must rebind: s = s.upper().", "i": 20, "run": "s = \"hello\"\ns.upper()"}, {"type": "section", "title": "Indexing & Slicing", "subtitle": "One model for all sequences", "i": 21}, {"type": "content", "title": "Sequences are zero-indexed", "bullets": ["Strings, lists, tuples share ONE model: s[start:stop:step].", "Index 0 is first; -1 is last.", "Golden rule: stop is EXCLUDED."], "code": "s = \"GRADES\"\ns[0]     # 'G'\ns[-1]    # 'S'\ns[0:3]   # 'GRA'  (stop 3 excluded)\ns[::2]   # 'GAE'\ns[::-1]  # 'SEDARG'", "i": 22, "run": "s = \"GRADES\"\ns[0]     # 'G'\ns[-1]    # 'S'\ns[0:3]   # 'GRA'  (stop 3 excluded)\ns[::2]   # 'GAE'\ns[::-1]  # 'SEDARG'"}, {"type": "predict", "topic": "indexing", "prompt": "What is printed?", "code": "s = \"GRADES\"\nprint(s[0], s[-1])", "run": "s = \"GRADES\"\nprint(s[0], s[-1])", "expect": "G S", "why": "Index 0 is the first char; -1 is the last.", "i": 23}, {"type": "predict", "topic": "slicing", "prompt": "Predict the slice.", "code": "s = \"GRADES\"\nprint(s[0:3])", "run": "s = \"GRADES\"\nprint(s[0:3])", "expect": "GRA", "why": "start:stop — stop (index 3) is EXCLUDED. Chars 0,1,2 only.", "i": 24}, {"type": "predict", "topic": "slicing", "prompt": "Trickier: what comes out?", "code": "s = \"GRADES\"\nprint(s[::-1])", "run": "s = \"GRADES\"\nprint(s[::-1])", "expect": "SEDARG", "why": "step -1 walks the sequence backwards — a reversed string.", "i": 25}, {"type": "mcq", "topic": "slicing", "prompt": "In s[a:b], the element at index b is...", "code": "s = \"PYTHON\"\ns[1:4]", "options": ["Included", "Excluded", "Only if b is negative", "Depends on step"], "answer": 1, "expect": "Excluded", "why": "The stop index is never included — the #1 off-by-one source.", "i": 26, "run": "s = \"PYTHON\"\ns[1:4]"}, {"type": "section", "title": "String Immutability", "subtitle": "A payoff of the mutable/immutable spine", "i": 27}, {"type": "content", "title": "Strings cannot be changed in place", "bullets": ["Assigning to s[0] raises TypeError (just like editing a tuple).", "To 'change' a string you build a NEW one — its id() differs.", "Same lesson as the number: immutable => new object."], "code": "s = \"hello\"\ns[0] = \"H\"        # TypeError!\ns = \"H\" + s[1:]   # OK -- new object, new id", "i": 28, "run": "s = \"hello\"\ns[0] = \"H\"        # TypeError!\ns = \"H\" + s[1:]   # OK -- new object, new id"}, {"type": "predict", "topic": "str immutability", "prompt": "What happens on the last line?", "code": "s = \"hello\"\ns[0] = \"H\"", "run": "s = \"hello\"\ntry:\n    s[0] = \"H\"\nexcept TypeError as e:\n    print(\"TypeError:\", e)", "expect": "TypeError (item assignment not allowed)", "why": "Strings are immutable — you cannot change a character in place.", "i": 29}, {"type": "predict", "topic": "upper id", "prompt": "Bind first, then compare ids. True/False?", "code": "a = \"hello\"\nb = a.upper()\nprint(a is b)", "run": "a = \"hello\"\nb = a.upper()\nprint(a is b)", "expect": "False", "why": "upper() built a new 'HELLO' object; a still points to the original 'hello'.", "i": 30}, {"type": "section", "title": "The Cleaning Toolkit", "subtitle": "strip / split / join", "i": 31}, {"type": "content", "title": "Parsing raw records", "bullets": ["strip() trims surrounding whitespace.", "split(sep) breaks a line into fields; join glues them back.", "Text stays str until you cast it — '87' is not 87."], "code": "raw = \"  CS24I1021 , 87 \"\nraw.strip()              # 'CS24I1021 , 87'\nraw.strip().split(\",\")   # ['CS24I1021 ', ' 87']\n\"-\".join([\"a\",\"b\",\"c\"])   # 'a-b-c'\n\"87\".isdigit()           # True", "i": 32, "run": "raw = \"  CS24I1021 , 87 \"\nraw.strip()              # 'CS24I1021 , 87'\nraw.strip().split(\",\")   # ['CS24I1021 ', ' 87']\n\"-\".join([\"a\",\"b\",\"c\"])   # 'a-b-c'\n\"87\".isdigit()           # True"}, {"type": "predict", "topic": "split/strip", "prompt": "What is the result?", "code": "raw = \"  CS24I1021 , 87 \"\nprint(raw.strip().split(\",\"))", "run": "raw = \"  CS24I1021 , 87 \"\nprint(raw.strip().split(\",\"))", "expect": "['CS24I1021 ', ' 87']", "why": "strip() trims outer spaces; split(',') breaks on the comma. Inner spaces remain.", "i": 33}, {"type": "predict", "topic": "types after split", "prompt": "What type is the second item?", "code": "parts = \"CS,87\".split(\",\")\nprint(type(parts[1]))", "run": "parts = \"CS,87\".split(\",\")\nprint(type(parts[1]))", "expect": "<class 'str'>", "why": "Text stays str until you cast it. '87' is a string, not the number 87.", "i": 34}, {"type": "mcq", "topic": "cleaning trio", "prompt": "Which trio is the everyday text-parsing toolkit?", "code": "# parsing a raw record line", "options": ["upper / lower / title", "strip / split / join", "find / index / count", "encode / decode / format"], "answer": 1, "expect": "strip / split / join", "why": "strip (trim) -> split (fields) -> join (reassemble). Core of Module 4.", "i": 35, "run": "# parsing a raw record line"}, {"type": "section", "title": "f-strings", "subtitle": "Readable, formatted output", "i": 36}, {"type": "content", "title": "Format specifiers", "bullets": ["f\"{value}\" embeds a value inside a string.", ":.1f -> one decimal; :.1% -> percentage; :>6 -> right-align.", "Great for clean tabular reports (e.g. a gradebook printout)."], "code": "score = 87.5\nf\"{score:.1f}\"     # '87.5'\nf\"{0.875:.1%}\"     # '87.5%'", "i": 37, "run": "score = 87.5\nf\"{score:.1f}\"     # '87.5'\nf\"{0.875:.1%}\"     # '87.5%'"}, {"type": "predict", "topic": "f-string", "prompt": "What is printed?", "code": "r = 0.875\nprint(f\"{r:.1%}\")", "run": "r = 0.875\nprint(f\"{r:.1%}\")", "expect": "87.5%", "why": "The % spec multiplies by 100 and appends a percent sign.", "i": 38}, {"type": "section", "title": "range", "subtitle": "Looks like a list — but isn't", "i": 39}, {"type": "content", "title": "range is a lazy object", "bullets": ["range(10) does NOT build a list of ten numbers.", "It stores only start, stop, step and makes numbers on demand.", "That's why for i in range(...) is cheap — it never builds the full list."], "code": "r = range(0, 10, 2)\ntype(r)           # <class 'range'>\nr.start, r.stop, r.step  # 0, 10, 2\nr[3], len(r)      # 6, 5\nrange(10**12)     # instant! stores 3 numbers, not a trillion", "i": 40, "run": "r = range(0, 10, 2)\ntype(r)           # <class 'range'>\nr.start, r.stop, r.step  # 0, 10, 2\nr[3], len(r)      # 6, 5\nrange(10**12)     # instant! stores 3 numbers, not a trillion"}, {"type": "predict", "topic": "range", "prompt": "What does this print?", "code": "r = range(0, 10, 2)\nprint(r[3], len(r))", "run": "r = range(0, 10, 2)\nprint(r[3], len(r))", "expect": "6 5", "why": "Values are 0,2,4,6,8: index 3 is 6, and there are 5 of them.", "i": 41}, {"type": "section", "title": "Type Casting", "subtitle": "Turning one type into another — and the gotchas", "i": 42}, {"type": "content", "title": "Casting text to numbers", "bullets": ["Data from files, forms, input() always arrives as TEXT.", "Casting converts it so you can compute.", "The #1 beginner bug: '42' from a file is text, not the number 42."], "code": "marks = \"42\"       # text, as if read from a file\nmarks + 10        # ERROR -- str + int\nint(marks) + 10   # 52  -- cast first, now it works", "i": 43, "run": "marks = \"42\"       # text, as if read from a file\nmarks + 10        # ERROR -- str + int\nint(marks) + 10   # 52  -- cast first, now it works"}, {"type": "predict", "topic": "casting truncation", "prompt": "Rounds or chops? Predict.", "code": "print(int(3.99))", "run": "print(int(3.99))", "expect": "3", "why": "int() truncates toward zero — it chops the decimal, does NOT round.", "i": 44}, {"type": "predict", "topic": "casting strict", "prompt": "What happens?", "code": "int(\"3.14\")", "run": "try:\n    print(int(\"3.14\"))\nexcept ValueError as e:\n    print(\"ValueError:\", e)", "expect": "ValueError (not a clean whole number)", "why": "int() is strict about text; use int(float(\"3.14\")) -> 3 instead.", "i": 45}, {"type": "section", "title": "Lists", "subtitle": "Ordered, mutable, duplicates allowed", "i": 46}, {"type": "content", "title": "An ordered, editable collection", "bullets": ["Holds many values in order, in square brackets; index from 0.", "Mutable: change, append, remove in place.", "Negative index counts from the back: marks[-1] is the last."], "code": "marks = [42, 55, 78, 90]\nmarks[0]         # 42\nmarks[-1]        # 90\nmarks.append(65) # add at the end\nmarks[1] = 60    # change in place", "i": 47, "run": "marks = [42, 55, 78, 90]\nmarks[0]         # 42\nmarks[-1]        # 90\nmarks.append(65) # add at the end\nmarks[1] = 60    # change in place"}, {"type": "predict", "topic": "list", "prompt": "What is printed?", "code": "scores = [87, 91, 78, 91]\nprint(len(scores))", "run": "scores = [87, 91, 78, 91]\nprint(len(scores))", "expect": "4", "why": "Lists allow duplicates — both 91s are counted.", "i": 48}, {"type": "predict", "topic": "list slice", "prompt": "Same slice rule as strings — output?", "code": "scores = [87, 91, 78, 91, 65]\nprint(scores[1:3])", "run": "scores = [87, 91, 78, 91, 65]\nprint(scores[1:3])", "expect": "[91, 78]", "why": "One slice model for all sequences. Indices 1,2; stop=3 excluded.", "i": 49}, {"type": "section", "title": "Tuples", "subtitle": "A list that cannot change", "i": 50}, {"type": "content", "title": "Fixed-shape records", "bullets": ["Round brackets, frozen once created (immutable).", "Use for values that belong together: a coordinate, a fixed record.", "Gotcha: a single-item tuple needs a comma — (5) is 5, but (5,) is a tuple."], "code": "point = (10, 20)\npoint[0]         # 10  (reading is fine)\npoint[0] = 99    # ERROR -- tuples cannot change\nstudent = (\"CS24I1021\", \"Asha\", 78)", "i": 51, "run": "point = (10, 20)\npoint[0]         # 10  (reading is fine)\npoint[0] = 99    # ERROR -- tuples cannot change\nstudent = (\"CS24I1021\", \"Asha\", 78)"}, {"type": "predict", "topic": "tuple", "prompt": "What happens?", "code": "t = (\"CS24I1021\", \"Ada\", 87)\nt[0] = \"X\"", "run": "t = (\"CS24I1021\", \"Ada\", 87)\ntry:\n    t[0] = \"X\"\nexcept TypeError as e:\n    print(\"TypeError:\", e)", "expect": "TypeError (tuples are immutable)", "why": "Tuples are fixed records — you cannot reassign an element.", "i": 52}, {"type": "predict", "topic": "single tuple", "prompt": "What type is this?", "code": "x = (5,)\nprint(type(x))", "run": "x = (5,)\nprint(type(x))", "expect": "<class 'tuple'>", "why": "The comma makes it a tuple. (5) without a comma would just be int 5.", "i": 53}, {"type": "mcq", "topic": "list vs tuple", "prompt": "When prefer a tuple over a list?", "code": "student = (\"CS24I1021\", \"Ada\", 87)", "options": ["When it grows/shrinks often", "When you need a fixed record that shouldn't change", "When you need duplicates", "When you need fastest append"], "answer": 1, "expect": "When you need a fixed record that should not change", "why": "Immutability signals intent: a tuple is a fixed row.", "i": 54, "run": "student = (\"CS24I1021\", \"Ada\", 87)"}, {"type": "section", "title": "Sets", "subtitle": "Unique items, no order", "i": 55}, {"type": "content", "title": "Unordered, unique", "bullets": ["Curly braces; keeps only unique values (duplicates vanish).", "No order, so no indexing — but membership is very fast.", "Sets do real maths: & intersection, | union, - difference."], "code": "s = {1, 2, 2, 3, 3, 3}   # {1, 2, 3}\n3 in s                   # True (fast)\nset([1,1,2,2,3])         # {1,2,3} de-dup a list\n{1,2,3} & {2,3,4}        # {2, 3}", "i": 56, "run": "s = {1, 2, 2, 3, 3, 3}   # {1, 2, 3}\n3 in s                   # True (fast)\nset([1,1,2,2,3])         # {1,2,3} de-dup a list\n{1,2,3} & {2,3,4}        # {2, 3}"}, {"type": "predict", "topic": "set dedup", "prompt": "What is printed?", "code": "rolls = [\"CS24I1021\", \"CS24I1021\", \"EC24B1001\"]\nprint(len(set(rolls)))", "run": "rolls = [\"CS24I1021\", \"CS24I1021\", \"EC24B1001\"]\nprint(len(set(rolls)))", "expect": "2", "why": "Sets drop duplicates automatically — two distinct rolls remain.", "i": 57}, {"type": "predict", "topic": "set ops", "prompt": "Predict the intersection.", "code": "a = {1, 2, 3}\nb = {2, 3, 4}\nprint(a & b)", "run": "a = {1, 2, 3}\nb = {2, 3, 4}\nprint(a & b)", "expect": "{2, 3}", "why": "& is set intersection — elements present in BOTH sets.", "i": 58}, {"type": "predict", "topic": "set unordered", "prompt": "Does this work? Output or error?", "code": "u = {\"a\", \"b\", \"c\"}\nprint(u[0])", "run": "u = {\"a\", \"b\", \"c\"}\ntry:\n    print(u[0])\nexcept TypeError as e:\n    print(\"TypeError:\", e)", "expect": "TypeError (sets are not indexable)", "why": "Sets are unordered — no positions, so u[0] is meaningless.", "i": 59}, {"type": "section", "title": "Dictionaries", "subtitle": "key -> value lookup", "i": 60}, {"type": "content", "title": "The data-science workhorse", "bullets": ["Lookup by key is the core O(1) operation.", "get(key, default) avoids KeyError; 'in' checks KEYS.", "A list of dicts is a table (DataFrame) in waiting."], "code": "g = {\"CS24I1021\": 87, \"EC24B1001\": 91}\ng[\"CS24I1021\"]      # 87\ng.get(\"XX\", 0)      # 0  (safe default)\n\"CS24I1021\" in g    # True (checks keys)", "i": 61, "run": "g = {\"CS24I1021\": 87, \"EC24B1001\": 91}\ng[\"CS24I1021\"]      # 87\ng.get(\"XX\", 0)      # 0  (safe default)\n\"CS24I1021\" in g    # True (checks keys)"}, {"type": "predict", "topic": "dict lookup", "prompt": "What is printed?", "code": "grades = {\"CS24I1021\": 87, \"EC24B1001\": 91}\nprint(grades[\"EC24B1001\"])", "run": "grades = {\"CS24I1021\": 87, \"EC24B1001\": 91}\nprint(grades[\"EC24B1001\"])", "expect": "91", "why": "Dict lookup by key returns its value — core O(1) operation.", "i": 62}, {"type": "predict", "topic": "dict membership", "prompt": "True or False?", "code": "grades = {\"CS24I1021\": 87}\nprint(87 in grades)", "run": "grades = {\"CS24I1021\": 87}\nprint(87 in grades)", "expect": "False", "why": "'in' checks KEYS, not values. 87 is a value, so it's False.", "i": 63}, {"type": "mcq", "topic": "choose collection", "prompt": "Roll -> score, fast lookup by roll. Which collection?", "code": "# CS24I1021 -> 87, EC24B1001 -> 91 ...", "options": ["list", "tuple", "set", "dict"], "answer": 3, "expect": "dict", "why": "Key -> value lookup is exactly what a dict is for.", "i": 64, "run": "# CS24I1021 -> 87, EC24B1001 -> 91 ..."}, {"type": "section", "title": "The Mutability Trap", "subtitle": "Ties back to the spine: assignment is not a copy", "i": 65}, {"type": "content", "title": "b = a is not a copy", "bullets": ["b = a binds a NEW label to the SAME object (same id).", "Mutating through b is visible through a.", ".copy() makes a separate list."], "code": "a = [1, 2, 3]\nb = a          # same object!\nb.append(4)\na              # [1, 2, 3, 4]\nc = a.copy()   # real (separate) copy", "i": 66, "run": "a = [1, 2, 3]\nb = a          # same object!\nb.append(4)\na              # [1, 2, 3, 4]\nc = a.copy()   # real (separate) copy"}, {"type": "predict", "topic": "mutability trap", "prompt": "THE classic surprise. What is a now?", "code": "a = [1, 2, 3]\nb = a\nb.append(4)\nprint(a)", "run": "a = [1, 2, 3]\nb = a\nb.append(4)\nprint(a)", "expect": "[1, 2, 3, 4]", "why": "b = a binds a NEW label to the SAME object — mutating b mutates a.", "i": 67}, {"type": "predict", "topic": "real copy", "prompt": "Now with .copy() — what is a?", "code": "a = [1, 2, 3]\nc = a.copy()\nc.append(5)\nprint(a)", "run": "a = [1, 2, 3]\nc = a.copy()\nc.append(5)\nprint(a)", "expect": "[1, 2, 3]", "why": "copy() makes a separate list, so appending to c leaves a untouched.", "i": 68}, {"type": "section", "title": "Mini Challenge", "subtitle": "Clean this data — the bridge to Module 4", "i": 69}, {"type": "content", "title": "Add up a messy column of marks", "bullets": ["Real datasets are full of 'N/A', '', '1,000', '42 '.", "This loop works... until it hits 'N/A' and crashes.", "That crash is exactly what Data Cleaning exists to solve."], "code": "marks = [\"42\", \"3.14\", \"N/A\", \"100\"]\ntotal = 0\nfor m in marks:\n    total += int(m)   # what happens at \"N/A\"?", "i": 70, "run": "marks = [\"42\", \"3.14\", \"N/A\", \"100\"]\ntotal = 0\nfor m in marks:\n    total += int(m)   # what happens at \"N/A\"?"}, {"type": "predict", "topic": "cleaning crash", "prompt": "What error stops this loop?", "code": "marks = [\"42\", \"N/A\", \"100\"]\ntotal = 0\nfor m in marks:\n    total += int(m)", "run": "marks = [\"42\", \"N/A\", \"100\"]\ntotal = 0\ntry:\n    for m in marks:\n        total += int(m)\nexcept ValueError as e:\n    print(\"ValueError:\", e)", "expect": "ValueError (invalid literal for int(): 'N/A')", "why": "int('N/A') can't parse — real files need cleaning before math. (Bridges to Module 4.)", "i": 71}, {"type": "section", "title": "Wrap-up", "subtitle": "Nouns now; verbs (control structures) next", "i": 72}, {"type": "content", "title": "What we discovered", "bullets": ["Every value is an object with a type; id() reveals identity.", "Immutable => new object/new address; mutable => same object/same address.", "Strings + list/tuple/set/dict are the containers; a list-of-dicts is a table.", "Casting text to numbers causes the most common data bugs.", "Next (L5-L6): control structures — if/else and loops — to build the gradebook."], "code": "gradebook = [\n  {\"roll\":\"CS24I1021\",\"name\":\"Ada\",\"score\":87},\n  {\"roll\":\"EC24B1001\",\"name\":\"Alan\",\"score\":91},\n]  # loops & branching bring this to life next", "i": 73, "run": "gradebook = [\n  {\"roll\":\"CS24I1021\",\"name\":\"Ada\",\"score\":87},\n  {\"roll\":\"EC24B1001\",\"name\":\"Alan\",\"score\":91},\n]  # loops & branching bring this to life next"}];
+const TOTAL = DECK.length;
+let idx = 0, pyReady = false, pyodide = null;
+const seen = new Set();
+const $ = s => document.querySelector(s);
+
+async function initPy(){
+  const bar = $("#pybar");
+  if(location.protocol === "file:"){
+    bar.className = "pybar warn";
+    bar.textContent = "Run disabled — use the start_lecture launcher (not double-click)";
+    return;
+  }
+  try{
+    bar.textContent = "Loading Python runtime…";
+    pyodide = await loadPyodide({ indexURL: "./pyodide/" });
+    pyReady = true; bar.className = "pybar ready"; bar.textContent = "Python ready ✓";
+    refreshRunButtons();
+  }catch(e){ bar.className="pybar warn"; bar.textContent="Python failed to load — content & reveal still work"; }
+}
+function refreshRunButtons(){
+  const it = DECK[idx]; const canRun = pyReady && it.type==="predict";
+  const rb=$("#runBtn"); if(rb){ rb.disabled=!canRun; rb.style.display=(it.type==="predict")?"":"none"; }
+}
+async function pyRun(src){
+  if(!pyReady) return {out:"(run unavailable — see banner)",err:false};
+  try{
+    pyodide.runPython("import sys, io\n_buf = io.StringIO()\nsys.stdout = _buf\n");
+    pyodide.runPython(src);
+    let res = pyodide.runPython("sys.stdout = sys.__stdout__; _buf.getvalue()");
+    return {out:(res&&res.length)?res.replace(/\n$/,""):"(no output)",err:false};
+  }catch(err){ pyodide.runPython("sys.stdout = sys.__stdout__");
+    return {out:String(err).split("\n").slice(-4).join("\n"),err:true}; }
+}
+async function runCurrent(){
+  const it=DECK[idx]; if(it.type!=="predict") return;
+  const box=$("#outbox"),out=$("#outpre"); if(!box) return;
+  box.style.display="block"; out.className=""; out.textContent="running…";
+  const r=await pyRun(it.run); out.className=r.err?"err":""; out.textContent=r.out;
+}
+function reveal(){
+  const it=DECK[idx]; const rv=$("#reveal"); if(rv) rv.classList.add("show");
+  if(it.type==="mcq"){ const o=document.querySelector('.opt[data-i="'+it.answer+'"]'); if(o) o.classList.add("correct"); }
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function render(){
+  const it=DECK[idx]; seen.add(idx);
+  $("#count").textContent=(idx+1)+" / "+TOTAL;
+  const card=$("#card"); card.className="card"+(it.type==="section"?" section-card":"");
+  let b="";
+  if(it.type==="section"){
+    b+='<div class="section-kicker">Section</div>';
+    b+='<div class="section-title">'+esc(it.title)+'</div>';
+    if(it.subtitle) b+='<div class="section-sub">'+esc(it.subtitle)+'</div>';
+  } else if(it.type==="content"){
+    b+='<div class="content-title">'+esc(it.title)+'</div>';
+    if(it.bullets){ b+='<ul class="content-bullets">'; it.bullets.forEach(x=>b+='<li>'+esc(x)+'</li>'); b+='</ul>'; }
+    if(it.code) b+='<pre class="code">'+esc(it.code)+'</pre>';
+  } else {
+    b+='<div class="chips"><span class="chip '+it.type+'">'+it.type+'</span><span class="chip topic">'+esc(it.topic)+'</span></div>';
+    if(it.prompt) b+='<div class="prompt">'+esc(it.prompt)+'</div>';
+    b+='<pre class="code">'+esc(it.code)+'</pre>';
+    if(it.type==="mcq"){ const L="ABCDEFGH"; b+='<div class="opts">';
+      it.options.forEach((o,i)=>b+='<div class="opt" data-i="'+i+'"><span class="k">'+L[i]+'</span><span>'+esc(o)+'</span></div>'); b+='</div>';
+    } else { b+='<div class="output" id="outbox" style="display:none"><div class="lbl">Live output</div><pre id="outpre"></pre></div>'; }
+    b+='<div class="reveal" id="reveal"><div class="ans">'+esc(it.expect)+'</div><div class="why">'+esc(it.why)+'</div></div>';
+  }
+  card.innerHTML=b; buildDots();
+  const isQ=(it.type==="predict"||it.type==="mcq");
+  $("#revealBtn").style.display=isQ?"":"none"; refreshRunButtons();
+}
+function buildDots(){
+  const wrap=$("#dots"); wrap.innerHTML="";
+  DECK.forEach((it,i)=>{ const d=document.createElement("div");
+    let c="dot"; if(it.type==="section")c+=" section"; else if(it.type==="content")c+=" content";
+    if(seen.has(i))c+=" done"; if(i===idx)c+=" here";
+    d.className=c; d.title=it.title||it.topic||("#"+(i+1)); d.onclick=()=>{idx=i;render();}; wrap.appendChild(d); });
+}
+function next(){ if(idx<TOTAL-1){idx++;render();} }
+function prev(){ if(idx>0){idx--;render();} }
+function openPad(){
+  const it=DECK[idx]; const seed=(it.run||it.code||"").trim();
+  $("#padText").value=seed||"# type any Python, Ctrl+Enter to run\nprint('hello')";
+  $("#padOut").textContent=""; $("#padOut").className="pad-out";
+  $("#scrim").classList.add("show"); setTimeout(()=>$("#padText").focus(),30);
+}
+function closePad(){ $("#scrim").classList.remove("show"); }
+async function runPad(){
+  const out=$("#padOut"); out.className="pad-out"; out.textContent="running…";
+  const r=await pyRun($("#padText").value); out.className="pad-out"+(r.err?" err":""); out.textContent=r.out;
+}
+document.addEventListener("keydown",e=>{
+  const padOpen=$("#scrim").classList.contains("show");
+  if(padOpen){
+    if(e.key==="Escape"){e.preventDefault();closePad();}
+    else if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();runPad();}
+    else if(e.key==="Tab"){e.preventDefault();const t=$("#padText"),s=t.selectionStart,en=t.selectionEnd;
+      t.value=t.value.slice(0,s)+"    "+t.value.slice(en);t.selectionStart=t.selectionEnd=s+4;}
+    return;
+  }
+  if(e.key===" "||e.key==="ArrowRight"){e.preventDefault();next();}
+  else if(e.key==="ArrowLeft"){e.preventDefault();prev();}
+  else if(e.key==="r"||e.key==="R"){e.preventDefault();runCurrent();}
+  else if(e.key==="a"||e.key==="A"){e.preventDefault();reveal();}
+  else if(e.key==="s"||e.key==="S"){e.preventDefault();openPad();}
+});
+window.addEventListener("DOMContentLoaded",()=>{
+  $("#runBtn").addEventListener("click",runCurrent);
+  $("#revealBtn").addEventListener("click",reveal);
+  $("#scratchBtn").addEventListener("click",openPad);
+  $("#nextBtn").addEventListener("click",next);
+  $("#prevBtn").addEventListener("click",prev);
+  $("#padRun").addEventListener("click",runPad);
+  $("#padClose").addEventListener("click",closePad);
+  $("#scrim").addEventListener("click",e=>{ if(e.target===$("#scrim")) closePad(); });
+  render(); initPy();
+});
+</script>
+</body>
+</html>

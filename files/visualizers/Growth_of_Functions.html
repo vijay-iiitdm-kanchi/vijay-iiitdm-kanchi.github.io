@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Growth Rate Simulation</title>
+    <script src="chart.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f9; margin: 20px; }
+        .main-container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { flex: 1; min-width: 300px; background: #ecf0f1; padding: 20px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
+        .chart-container { flex: 3; min-width: 600px; position: relative; height: 70vh; }
+        .family-group { margin-bottom: 15px; background: white; padding: 10px; border-radius: 5px; border-left: 5px solid #3498db; }
+        .family-group h4 { margin: 0 0 10px 0; color: #2980b9; font-size: 0.9em; text-transform: uppercase; }
+        .checkbox-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.9em; }
+        .checkbox-item input { margin-right: 10px; }
+        .slider-box { margin: 20px 0; background: #d6eaf8; padding: 15px; border-radius: 8px; }
+        select { width: 100%; padding: 8px; border-radius: 5px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h2>Growth of Functions: Comprehensive Comparison</h2>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="slider-box">
+                <label>Input Size (n): <strong id="nVal">15</strong></label>
+                <input type="range" id="nSlider" min="2" max="100" value="15" style="width:100%">
+                <label>Y-Axis Scale:</label>
+                <select id="scale">
+                    <option value="linear">Linear</option>
+                    <option value="logarithmic">Logarithmic</option>
+                </select>
+            </div>
+
+            <div id="controls">
+                </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+const fact = (n) => (n <= 1 ? 1 : n * fact(n - 1));
+const log2 = (n) => Math.log2(n);
+
+const functionGroups = {
+    "Constants & Logs": {
+        "1": n => 1,
+        "lg n": n => log2(n),
+        "lg² n": n => Math.pow(log2(n), 2),
+        "√lg n": n => Math.sqrt(log2(n)),
+        "n^(1/lg n) (Constant 2)": n => 2
+    },
+    "Polynomials": {
+        "n": n => n,
+        "n²": n => Math.pow(n, 2),
+        "n³": n => Math.pow(n, 3),
+        "(√2)^lg n (n^0.5)": n => Math.pow(n, 0.5),
+        "4^lg n (n²)": n => Math.pow(n, 2)
+    },
+    "Linearithmic": {
+        "n lg n": n => n * log2(n),
+        "lg(n!)": n => log2(fact(Math.min(n, 20)))
+    },
+    "Exponentials": {
+        "(3/2)ⁿ": n => Math.pow(1.5, n),
+        "2ⁿ": n => Math.pow(2, n),
+        "eⁿ": n => Math.pow(Math.E, n),
+        "n · 2ⁿ": n => n * Math.pow(2, n)
+    },
+    "Super-Exponentials": {
+        "(lg n)!": n => fact(Math.floor(log2(n))),
+        "n!": n => fact(Math.min(n, 100)),
+        "(n+1)!": n => fact(Math.min(n + 1, 100)),
+        "n^(lg lg n)": n => Math.pow(n, log2(log2(n))),
+        "(lg n)^(lg n)": n => Math.pow(log2(n), log2(n)),
+        "2^(2ⁿ)": n => Math.pow(2, Math.pow(2, Math.min(n, 10)))
+    }
+};
+
+const colors = ["#3498db", "#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6", "#1abc9c", "#e67e22", "#34495e"];
+let colorIdx = 0;
+
+// Render Controls
+const container = document.getElementById('controls');
+for (const [groupName, funcs] of Object.entries(functionGroups)) {
+    const div = document.createElement('div');
+    div.className = 'family-group';
+    div.innerHTML = `<h4>${groupName}</h4>`;
+    for (const name in funcs) {
+        const item = document.createElement('div');
+        item.className = 'checkbox-item';
+        const checked = ["1", "n", "n²", "2ⁿ"].includes(name) ? "checked" : "";
+        item.innerHTML = `<input type="checkbox" value="${name}" data-group="${groupName}" ${checked}> ${name}`;
+        div.appendChild(item);
+    }
+    container.appendChild(div);
+}
+
+let chart;
+function update() {
+    const nLimit = parseInt(document.getElementById('nSlider').value);
+    document.getElementById('nVal').innerText = nLimit;
+    const scale = document.getElementById('scale').value;
+    const labels = Array.from({length: nLimit}, (_, i) => i + 1);
+    
+    const datasets = [];
+    colorIdx = 0;
+    
+    document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        const name = cb.value;
+        const group = cb.dataset.group;
+        const func = functionGroups[group][name];
+        
+        datasets.push({
+            label: name,
+            data: labels.map(n => func(n)),
+            borderColor: colors[colorIdx % colors.length],
+            fill: false,
+            tension: 0.2
+        });
+        colorIdx++;
+    });
+
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('growthChart'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { type: scale, title: { display: true, text: 'f(n)' } },
+                x: { title: { display: true, text: 'n' } }
+            },
+            plugins: { tooltip: { mode: 'index', intersect: false } }
+        }
+    });
+}
+
+document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', update));
+update();
+</script>
+</body>
+</html>

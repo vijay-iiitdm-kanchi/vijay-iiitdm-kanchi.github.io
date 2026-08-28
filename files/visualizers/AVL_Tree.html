@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVL Tree — Step-by-Step C Code Visualizer</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --warn: #e3b341;
+  --danger: #f85149;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --highlight-line: rgba(88,166,255,0.12);
+  --highlight-border: #58a6ff;
+  --node-default: #21262d;
+  --node-active: #1f4068;
+  --node-rotate: #4a2000;
+  --node-new: #0a3d13;
+  --node-compare: #2d2a00;
+}
+
+body.day-mode {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface2: #eef1f4;
+  --border: #d0d7de;
+  --accent: #0969da;
+  --accent2: #1a7f37;
+  --warn: #9a6700;
+  --danger: #cf222e;
+  --text: #1f2328;
+  --muted: #656d76;
+  --highlight-line: rgba(9,105,218,0.18);
+  --highlight-border: #0969da;
+  --node-default: #eef1f4;
+  --node-active: #dbeafe;
+  --node-rotate: #fef3c7;
+  --node-new: #dcfce7;
+  --node-compare: #fef9c3;
+}
+
+/* ── THEME TOGGLE BUTTON ── */
+.theme-toggle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.theme-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.theme-icon { font-size: 14px; transition: transform 0.4s; }
+.theme-btn:hover .theme-icon { transform: rotate(20deg); }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── TOP BAR ── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.logo { font-size: 1rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; white-space: nowrap; }
+.logo span { color: var(--accent2); }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+input[type=number] {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; width: 80px;
+}
+input[type=number]:focus { outline: none; border-color: var(--accent); }
+.btn {
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 12px;
+  padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface2); color: var(--text);
+  transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #0d1117; }
+.btn.primary:hover { background: #79b8ff; }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: rgba(248,81,73,0.1); }
+.btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.example-btns { display: flex; gap: 6px; align-items: center; }
+.ex-label { font-size: 11px; color: var(--muted); }
+
+/* ── MAIN LAYOUT ── */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── LEFT: C CODE PANEL ── */
+.code-panel {
+  width: 420px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.panel-header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+/* function tabs */
+.fn-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fn-tabs::-webkit-scrollbar { display: none; }
+.fn-tab {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.fn-tab:hover { color: var(--text); }
+.fn-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.code-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+.code-scroll::-webkit-scrollbar { width: 4px; }
+.code-scroll::-webkit-scrollbar-track { background: transparent; }
+.code-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.code-line {
+  display: flex;
+  align-items: flex-start;
+  min-height: 22px;
+  padding: 0 16px;
+  transition: background 0.2s;
+  position: relative;
+}
+.code-line.active {
+  background: var(--highlight-line);
+  border-left: 3px solid var(--highlight-border);
+  padding-left: 13px;
+}
+body.day-mode .active .code-text { color: #0d1117; }
+.ln { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); min-width: 28px; user-select: none; padding-top: 1px; }
+.code-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 22px; white-space: pre; }
+.active .code-text { color: #e6edf3; }
+
+/* syntax coloring */
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.num { color: #79c0ff; }
+.cm { color: var(--muted); font-style: italic; }
+.str { color: #a5d6ff; }
+.op { color: #ff7b72; }
+.type { color: #ffa657; }
+.var { color: #c9d1d9; }
+
+/* ── EXPLANATION BOX ── */
+.explain-box {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  min-height: 80px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.explain-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.explain-text {
+  font-size: 13px; line-height: 1.6; color: var(--text);
+  font-family: 'Outfit', sans-serif;
+}
+.explain-text code {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  background: var(--surface2); padding: 1px 5px; border-radius: 3px;
+  color: var(--accent);
+}
+
+/* step nav */
+.step-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.step-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+.step-info .curr { color: var(--accent); font-weight: 700; }
+.nav-btns { display: flex; gap: 6px; }
+
+/* ── RIGHT: TREE PANEL ── */
+.tree-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.tree-canvas-wrap {
+  flex: 1; overflow: hidden; position: relative;
+}
+canvas#tree-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── CALL STACK ── */
+.call-stack-panel {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.call-stack-list {
+  flex: 1; overflow-y: auto; padding: 8px;
+}
+.call-stack-list::-webkit-scrollbar { width: 3px; }
+.call-stack-list::-webkit-scrollbar-thumb { background: var(--border); }
+.cs-frame {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+}
+.cs-frame.active { border-color: var(--accent); background: rgba(88,166,255,0.07); }
+.cs-fn { color: var(--accent2); font-weight: 700; }
+.cs-arg { color: var(--warn); }
+.cs-info { color: var(--muted); margin-top: 3px; font-size: 10px; }
+
+/* legend */
+.legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  padding: 8px 16px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+}
+.leg-item { display: flex; align-items: center; gap: 6px; }
+.leg-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid transparent; }
+
+/* toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 20px; border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+}
+#toast.show { opacity: 1; }
+
+/* ── RESIZE HANDLES ── */
+.resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  background: var(--border);
+  cursor: col-resize;
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s;
+  user-select: none;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: var(--accent);
+}
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 32px;
+  background: currentColor;
+  opacity: 0.4;
+  border-radius: 1px;
+  box-shadow: -2px 0 0 currentColor, 2px 0 0 currentColor;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .call-stack-panel { display: none; }
+  .resize-handle.right-handle { display: none; }
+  .code-panel { width: 350px; }
+}
+@media (max-width: 650px) {
+  .code-panel { width: 100% !important; border-right: none; border-bottom: 1px solid var(--border); }
+  .resize-handle { display: none; }
+  .main { flex-direction: column; }
+  .tree-panel { min-height: 300px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AVL Tree <span>// C Visualizer</span></div>
+  <div class="controls">
+    <input type="number" id="val-input" placeholder="value" min="1" max="999" value="">
+    <button class="btn primary" onclick="startInsert()">⊕ Insert</button>
+    <button class="btn danger" onclick="resetTree()">⊘ Reset</button>
+  </div>
+  <div class="example-btns">
+    <span class="ex-label">Try:</span>
+    <button class="btn" onclick="loadExample('ll')" style="font-size:11px">LL: 30→20→10</button>
+    <button class="btn" onclick="loadExample('rr')" style="font-size:11px">RR: 10→20→30</button>
+    <button class="btn" onclick="loadExample('lr')" style="font-size:11px">LR: 30→10→20</button>
+    <button class="btn" onclick="loadExample('rl')" style="font-size:11px">RL: 10→30→20</button>
+  </div>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle day/night mode">
+      <span class="theme-icon" id="theme-icon">☀️</span>
+      <span id="theme-label">Day Mode</span>
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: Code panel -->
+  <div class="code-panel">
+    <div class="panel-header"><div class="dot"></div> C SOURCE CODE</div>
+    <div class="fn-tabs" id="fn-tabs">
+      <div class="fn-tab active" data-fn="insert" onclick="showFn('insert')">insert()</div>
+      <div class="fn-tab" data-fn="rotateRight" onclick="showFn('rotateRight')">rotateRight()</div>
+      <div class="fn-tab" data-fn="rotateLeft" onclick="showFn('rotateLeft')">rotateLeft()</div>
+      <div class="fn-tab" data-fn="getHeight" onclick="showFn('getHeight')">getHeight()</div>
+      <div class="fn-tab" data-fn="getBalance" onclick="showFn('getBalance')">getBalance()</div>
+    </div>
+    <div class="code-scroll" id="code-scroll">
+      <div id="code-lines"></div>
+    </div>
+    <div class="explain-box">
+      <div class="explain-label">▶ What's happening</div>
+      <div class="explain-text" id="explain-text">Insert a value to begin step-by-step execution.</div>
+    </div>
+    <div class="step-nav">
+      <div class="step-info">Step <span class="curr" id="step-curr">—</span> / <span id="step-total">—</span></div>
+      <div class="nav-btns">
+        <button class="btn" id="btn-prev" onclick="stepDir(-1)" disabled>← Prev</button>
+        <button class="btn" id="btn-next" onclick="stepDir(1)" disabled>Next →</button>
+        <button class="btn" id="btn-auto" onclick="toggleAuto()" disabled>▶ Auto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESIZE HANDLE: code ↔ tree -->
+  <div class="resize-handle left-handle" id="resize-left"></div>
+
+  <!-- RIGHT: Tree canvas -->
+  <div class="tree-panel">
+    <div class="panel-header"><div class="dot" style="background:var(--accent2)"></div> TREE STRUCTURE</div>
+    <div class="tree-canvas-wrap">
+      <canvas id="tree-canvas"></canvas>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#1f4068;border-color:var(--accent)"></div> Currently visiting</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#0a3d13;border-color:var(--accent2)"></div> Newly inserted</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#4a2000;border-color:var(--warn)"></div> Rotation pivot</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#2d2a00;border-color:#e3b341"></div> Comparing</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--node-default);border-color:var(--border)"></div> Normal</div>
+    </div>
+  </div>
+
+  <!-- RESIZE HANDLE: tree ↔ call stack -->
+  <div class="resize-handle right-handle" id="resize-right"></div>
+
+  <!-- RIGHT: Call stack -->
+  <div class="call-stack-panel">
+    <div class="panel-header"><div class="dot" style="background:var(--warn)"></div> CALL STACK</div>
+    <div class="call-stack-list" id="call-stack"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  C CODE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const C_CODE = {
+  getHeight: [
+    { text: `<span class="type">int</span> <span class="fn">getHeight</span>(<span class="type">Node</span>* <span class="var">n</span>) {`, id: 'gh0' },
+    { text: `    <span class="kw">if</span> (n == <span class="num">NULL</span>)`, id: 'gh1' },
+    { text: `        <span class="kw">return</span> <span class="num">-1</span>;`, id: 'gh2' },
+    { text: `    <span class="kw">return</span> n-><span class="var">height</span>;`, id: 'gh3' },
+    { text: `}`, id: 'gh4' },
+  ],
+  getBalance: [
+    { text: `<span class="type">int</span> <span class="fn">getBalance</span>(<span class="type">Node</span>* <span class="var">n</span>) {`, id: 'gb0' },
+    { text: `    <span class="kw">if</span> (n == <span class="num">NULL</span>)`, id: 'gb1' },
+    { text: `        <span class="kw">return</span> <span class="num">0</span>;`, id: 'gb2' },
+    { text: `    <span class="kw">return</span> <span class="fn">getHeight</span>(n-><span class="var">left</span>)`, id: 'gb3' },
+    { text: `           - <span class="fn">getHeight</span>(n-><span class="var">right</span>);`, id: 'gb4' },
+    { text: `}`, id: 'gb5' },
+  ],
+  rotateRight: [
+    { text: `<span class="type">Node</span>* <span class="fn">rotateRight</span>(<span class="type">Node</span>* <span class="var">z</span>) {`, id: 'rr0' },
+    { text: `    <span class="type">Node</span>* <span class="var">y</span> = z-><span class="var">left</span>;       <span class="cm">// y becomes new root</span>`, id: 'rr1' },
+    { text: `    <span class="type">Node</span>* <span class="var">T3</span> = y-><span class="var">right</span>;     <span class="cm">// save T3 subtree</span>`, id: 'rr2' },
+    { text: `    y-><span class="var">right</span> = z;          <span class="cm">// z becomes y's right</span>`, id: 'rr3' },
+    { text: `    z-><span class="var">left</span>  = T3;         <span class="cm">// T3 becomes z's left</span>`, id: 'rr4' },
+    { text: `    z-><span class="var">height</span> = <span class="num">1</span> + <span class="fn">max</span>(`, id: 'rr5' },
+    { text: `        <span class="fn">getHeight</span>(z-><span class="var">left</span>),`, id: 'rr6' },
+    { text: `        <span class="fn">getHeight</span>(z-><span class="var">right</span>));`, id: 'rr7' },
+    { text: `    y-><span class="var">height</span> = <span class="num">1</span> + <span class="fn">max</span>(`, id: 'rr8' },
+    { text: `        <span class="fn">getHeight</span>(y-><span class="var">left</span>),`, id: 'rr9' },
+    { text: `        <span class="fn">getHeight</span>(y-><span class="var">right</span>));`, id: 'rr10' },
+    { text: `    <span class="kw">return</span> y;              <span class="cm">// y is new subtree root</span>`, id: 'rr11' },
+    { text: `}`, id: 'rr12' },
+  ],
+  rotateLeft: [
+    { text: `<span class="type">Node</span>* <span class="fn">rotateLeft</span>(<span class="type">Node</span>* <span class="var">z</span>) {`, id: 'rl0' },
+    { text: `    <span class="type">Node</span>* <span class="var">y</span> = z-><span class="var">right</span>;      <span class="cm">// y becomes new root</span>`, id: 'rl1' },
+    { text: `    <span class="type">Node</span>* <span class="var">T2</span> = y-><span class="var">left</span>;      <span class="cm">// save T2 subtree</span>`, id: 'rl2' },
+    { text: `    y-><span class="var">left</span>  = z;          <span class="cm">// z becomes y's left</span>`, id: 'rl3' },
+    { text: `    z-><span class="var">right</span> = T2;         <span class="cm">// T2 becomes z's right</span>`, id: 'rl4' },
+    { text: `    z-><span class="var">height</span> = <span class="num">1</span> + <span class="fn">max</span>(`, id: 'rl5' },
+    { text: `        <span class="fn">getHeight</span>(z-><span class="var">left</span>),`, id: 'rl6' },
+    { text: `        <span class="fn">getHeight</span>(z-><span class="var">right</span>));`, id: 'rl7' },
+    { text: `    y-><span class="var">height</span> = <span class="num">1</span> + <span class="fn">max</span>(`, id: 'rl8' },
+    { text: `        <span class="fn">getHeight</span>(y-><span class="var">left</span>),`, id: 'rl9' },
+    { text: `        <span class="fn">getHeight</span>(y-><span class="var">right</span>));`, id: 'rl10' },
+    { text: `    <span class="kw">return</span> y;              <span class="cm">// y is new subtree root</span>`, id: 'rl11' },
+    { text: `}`, id: 'rl12' },
+  ],
+  insert: [
+    { text: `<span class="type">Node</span>* <span class="fn">insert</span>(<span class="type">Node</span>* <span class="var">node</span>, <span class="type">int</span> <span class="var">key</span>) {`, id: 'in0' },
+    { text: `    <span class="cm">/* 1. Normal BST insert */</span>`, id: 'in1' },
+    { text: `    <span class="kw">if</span> (node == <span class="num">NULL</span>)`, id: 'in2' },
+    { text: `        <span class="kw">return</span> <span class="fn">newNode</span>(key);`, id: 'in3' },
+    { text: `    <span class="kw">if</span> (key < node-><span class="var">key</span>)`, id: 'in4' },
+    { text: `        node-><span class="var">left</span>  = <span class="fn">insert</span>(node-><span class="var">left</span>,  key);`, id: 'in5' },
+    { text: `    <span class="kw">else if</span> (key > node-><span class="var">key</span>)`, id: 'in6' },
+    { text: `        node-><span class="var">right</span> = <span class="fn">insert</span>(node-><span class="var">right</span>, key);`, id: 'in7' },
+    { text: `    <span class="kw">else</span> <span class="kw">return</span> node; <span class="cm">// duplicate</span>`, id: 'in8' },
+    { text: ``, id: 'in9' },
+    { text: `    <span class="cm">/* 2. Update height */</span>`, id: 'in10' },
+    { text: `    node-><span class="var">height</span> = <span class="num">1</span> + <span class="fn">max</span>(`, id: 'in11' },
+    { text: `        <span class="fn">getHeight</span>(node-><span class="var">left</span>),`, id: 'in12' },
+    { text: `        <span class="fn">getHeight</span>(node-><span class="var">right</span>));`, id: 'in13' },
+    { text: ``, id: 'in14' },
+    { text: `    <span class="cm">/* 3. Get balance factor */</span>`, id: 'in15' },
+    { text: `    <span class="type">int</span> <span class="var">bf</span> = <span class="fn">getBalance</span>(node);`, id: 'in16' },
+    { text: ``, id: 'in17' },
+    { text: `    <span class="cm">/* 4. Check 4 imbalance cases */</span>`, id: 'in18' },
+    { text: `    <span class="cm">// LL Case</span>`, id: 'in19' },
+    { text: `    <span class="kw">if</span> (bf > <span class="num">1</span> && key < node-><span class="var">left</span>-><span class="var">key</span>)`, id: 'in20' },
+    { text: `        <span class="kw">return</span> <span class="fn">rotateRight</span>(node);`, id: 'in21' },
+    { text: `    <span class="cm">// RR Case</span>`, id: 'in22' },
+    { text: `    <span class="kw">if</span> (bf < <span class="num">-1</span> && key > node-><span class="var">right</span>-><span class="var">key</span>)`, id: 'in23' },
+    { text: `        <span class="kw">return</span> <span class="fn">rotateLeft</span>(node);`, id: 'in24' },
+    { text: `    <span class="cm">// LR Case</span>`, id: 'in25' },
+    { text: `    <span class="kw">if</span> (bf > <span class="num">1</span> && key > node-><span class="var">left</span>-><span class="var">key</span>) {`, id: 'in26' },
+    { text: `        node-><span class="var">left</span> = <span class="fn">rotateLeft</span>(node-><span class="var">left</span>);`, id: 'in27' },
+    { text: `        <span class="kw">return</span> <span class="fn">rotateRight</span>(node);`, id: 'in28' },
+    { text: `    }`, id: 'in29' },
+    { text: `    <span class="cm">// RL Case</span>`, id: 'in30' },
+    { text: `    <span class="kw">if</span> (bf < <span class="num">-1</span> && key < node-><span class="var">right</span>-><span class="var">key</span>) {`, id: 'in31' },
+    { text: `        node-><span class="var">right</span> = <span class="fn">rotateRight</span>(node-><span class="var">right</span>);`, id: 'in32' },
+    { text: `        <span class="kw">return</span> <span class="fn">rotateLeft</span>(node);`, id: 'in33' },
+    { text: `    }`, id: 'in34' },
+    { text: `    <span class="kw">return</span> node;`, id: 'in35' },
+    { text: `}`, id: 'in36' },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  NODE CLASS
+// ═══════════════════════════════════════════════════════════════
+class AVLNode {
+  constructor(key, id) {
+    this.key    = key;
+    this.left   = null;
+    this.right  = null;
+    this.height = 0;
+    this.id     = id || Math.random().toString(36).slice(2, 8);
+    this.state  = 'normal'; // 'normal'|'active'|'new'|'rotate'|'compare'
+    this.x = 0; this.y = 0;
+  }
+}
+
+// ── helpers ──────────────────────────────────────────────────
+function getH(n)    { return n ? n.height : -1; }
+function getBF(n)   { return n ? getH(n.left) - getH(n.right) : 0; }
+function updH(n)    { if (n) n.height = 1 + Math.max(getH(n.left), getH(n.right)); }
+
+function cloneTree(n) {
+  if (!n) return null;
+  const c = new AVLNode(n.key, n.id);
+  c.height = n.height;
+  c.state  = n.state;
+  c.left   = cloneTree(n.left);
+  c.right  = cloneTree(n.right);
+  return c;
+}
+
+// Mark node states on a cloned snapshot
+function withStates(root, stateMap) {
+  // stateMap: { nodeId: 'active'|'new'|'rotate'|'compare' }
+  function walk(n) {
+    if (!n) return;
+    n.state = stateMap[n.id] || 'normal';
+    walk(n.left); walk(n.right);
+  }
+  walk(root);
+  return root;
+}
+
+// ── live (canonical) tree ─────────────────────────────────────
+let treeRoot = null;   // always the final, correct AVL tree
+
+// ── step recording ────────────────────────────────────────────
+let steps    = [];
+let stepIdx  = -1;
+let autoTimer = null;
+
+// Push one step.
+// displayRoot  : the tree to SHOW for this step (a clone with states already set)
+// fn / lineId  : which tab + which line to highlight
+// explain      : HTML string for the explanation box
+// callStack    : array of frame objects
+function pushStep(displayRoot, fn, lineId, explain, callStack) {
+  steps.push({ fn, lineId, explain, treeSnapshot: displayRoot, callStack: [...callStack] });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CORE ENGINE  — single clean recursive function
+//
+//  workNode   : node in the WORKING copy we are currently at
+//  key        : value being inserted
+//  callStack  : immutable array of frames (we spread it at each level)
+//  idMap      : maps workNode.key → canonical id (so snapshots use
+//               stable IDs that match the live treeRoot)
+//
+//  Returns: the (possibly new) subtree root in the working copy.
+//
+//  The working copy starts as a clone of treeRoot BEFORE this
+//  insertion.  We mutate it as we go, mirroring what the C code
+//  would do, and take snapshots at each interesting moment.
+//  After all steps are recorded we replace treeRoot with the
+//  fully-balanced result (also computed by insertRaw for safety).
+// ═══════════════════════════════════════════════════════════════
+
+// Lookup a node by key in any tree (returns first match)
+function findByKey(root, key) {
+  if (!root) return null;
+  if (root.key === key) return root;
+  return findByKey(root.left, key) || findByKey(root.right, key);
+}
+
+// Snapshot the working tree, painting stateMap onto it
+function snap(workRoot, stateMap) {
+  return withStates(cloneTree(workRoot), stateMap || {});
+}
+
+// ── the traced insert ─────────────────────────────────────────
+// workRoot is passed by reference through a wrapper so rotations
+// at the root level can be reflected properly.
+let _workRoot = null;   // mutable root of the working copy
+
+function tracedInsert(workNode, key, callStack) {
+  const frame = { fn: 'insert', arg: key, node: workNode ? workNode.key : 'NULL' };
+  const cs    = [...callStack, frame];
+
+  // ── Step: check node == NULL ──────────────────────────────
+  pushStep(
+    snap(_workRoot, workNode ? { [workNode.id]: 'active' } : {}),
+    'insert', 'in2',
+    workNode === null
+      ? `<code>node == NULL</code>: we've reached an empty position — this is where the new node <code>${key}</code> will be created.`
+      : `<code>insert(node=${workNode.key}, key=${key})</code>: check <code>node == NULL</code>? → <b>No</b>, continue.`,
+    cs
+  );
+
+  if (workNode === null) {
+    // create the new node
+    const newNode = new AVLNode(key);
+    newNode.height = 0;
+    // attach it to _workRoot (caller will wire parent pointer via return value)
+    // snapshot AFTER attachment is handled by caller; show it here already
+    // We need to temporarily attach to show the tree – done via return + parent re-assign below
+    pushStep(
+      snap(_workRoot, {}),   // will be updated by caller after re-assign
+      'insert', 'in3',
+      `<code>newNode(${key})</code> created with <code>height=0</code>, <code>left=NULL</code>, <code>right=NULL</code>. Return it to be linked in.`,
+      cs
+    );
+    return newNode;
+  }
+
+  // ── Step: compare key vs node->key ────────────────────────
+  if (key < workNode.key) {
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'compare' }),
+      'insert', 'in4',
+      `<code>key ${key} &lt; node-&gt;key ${workNode.key}</code> → <b>go LEFT</b>. Recurse: <code>insert(node-&gt;left, ${key})</code>.`,
+      cs
+    );
+    workNode.left = tracedInsert(workNode.left, key, cs);
+
+    // snapshot after recursion returns — node->left is now set
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'active' }),
+      'insert', 'in5',
+      `Returned from left subtree. <code>node-&gt;left</code> of <code>${workNode.key}</code> is now updated.`,
+      cs
+    );
+
+  } else if (key > workNode.key) {
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'compare' }),
+      'insert', 'in6',
+      `<code>key ${key} &gt; node-&gt;key ${workNode.key}</code> → <b>go RIGHT</b>. Recurse: <code>insert(node-&gt;right, ${key})</code>.`,
+      cs
+    );
+    workNode.right = tracedInsert(workNode.right, key, cs);
+
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'active' }),
+      'insert', 'in7',
+      `Returned from right subtree. <code>node-&gt;right</code> of <code>${workNode.key}</code> is now updated.`,
+      cs
+    );
+
+  } else {
+    // duplicate
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'compare' }),
+      'insert', 'in8',
+      `<code>key ${key} == node-&gt;key ${workNode.key}</code>: <b>duplicate</b> — AVL trees don't allow duplicates. Return node unchanged.`,
+      cs
+    );
+    return workNode;
+  }
+
+  // ── Step: update height ───────────────────────────────────
+  updH(workNode);
+  pushStep(
+    snap(_workRoot, { [workNode.id]: 'active' }),
+    'insert', 'in11',
+    `Back at <code>${workNode.key}</code> (unwinding stack ↑). Update height: <code>h = 1 + max(h(left)=${getH(workNode.left)}, h(right)=${getH(workNode.right)}) = ${workNode.height}</code>.`,
+    cs
+  );
+
+  // ── Step: get balance factor ─────────────────────────────
+  const bf = getBF(workNode);
+  const imbal = Math.abs(bf) > 1;
+  pushStep(
+    snap(_workRoot, { [workNode.id]: imbal ? 'rotate' : 'active' }),
+    'insert', 'in16',
+    `Balance factor of <code>${workNode.key}</code>: <code>bf = h(left)=${getH(workNode.left)} − h(right)=${getH(workNode.right)} = <b>${bf}</b></code>. ${imbal ? '⚠️ <b>|bf| > 1 — tree is unbalanced! Rotation needed.</b>' : '✅ Balanced (|bf| ≤ 1).'}`,
+    cs
+  );
+
+  // ── LL Case ───────────────────────────────────────────────
+  if (bf > 1 && workNode.left && key < workNode.left.key) {
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.left.id]: 'rotate' }),
+      'insert', 'in20',
+      `<b>LL Case:</b> <code>bf=${bf} &gt; 1</code> and <code>key ${key} &lt; left-&gt;key ${workNode.left.key}</code>. Imbalance is on the <b>Left-Left</b> path. Fix: <code>rotateRight(node=${workNode.key})</code>.`,
+      cs
+    );
+    return doRotateRight(workNode, cs);
+  }
+
+  // ── RR Case ───────────────────────────────────────────────
+  if (bf < -1 && workNode.right && key > workNode.right.key) {
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.right.id]: 'rotate' }),
+      'insert', 'in23',
+      `<b>RR Case:</b> <code>bf=${bf} &lt; -1</code> and <code>key ${key} &gt; right-&gt;key ${workNode.right.key}</code>. Imbalance is on the <b>Right-Right</b> path. Fix: <code>rotateLeft(node=${workNode.key})</code>.`,
+      cs
+    );
+    return doRotateLeft(workNode, cs);
+  }
+
+  // ── LR Case ───────────────────────────────────────────────
+  if (bf > 1 && workNode.left && key > workNode.left.key) {
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.left.id]: 'rotate' }),
+      'insert', 'in26',
+      `<b>LR Case:</b> <code>bf=${bf} &gt; 1</code> but <code>key ${key} &gt; left-&gt;key ${workNode.left.key}</code>. Imbalance is on the <b>Left-Right</b> path. Fix requires <b>two rotations</b>.`,
+      cs
+    );
+    // Step 1: rotateLeft on left child
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.left.id]: 'rotate' }),
+      'insert', 'in27',
+      `LR Step 1: <code>node-&gt;left = rotateLeft(node-&gt;left=${workNode.left.key})</code>.`,
+      cs
+    );
+    workNode.left = doRotateLeft(workNode.left, cs);
+
+    // Step 2: rotateRight on node
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.left.id]: 'rotate' }),
+      'insert', 'in28',
+      `LR Step 2: <code>rotateRight(node=${workNode.key})</code>.`,
+      cs
+    );
+    return doRotateRight(workNode, cs);
+  }
+
+  // ── RL Case ───────────────────────────────────────────────
+  if (bf < -1 && workNode.right && key < workNode.right.key) {
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.right.id]: 'rotate' }),
+      'insert', 'in31',
+      `<b>RL Case:</b> <code>bf=${bf} &lt; -1</code> but <code>key ${key} &lt; right-&gt;key ${workNode.right.key}</code>. Imbalance is on the <b>Right-Left</b> path. Fix requires <b>two rotations</b>.`,
+      cs
+    );
+    // Step 1: rotateRight on right child
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.right.id]: 'rotate' }),
+      'insert', 'in32',
+      `RL Step 1: <code>node-&gt;right = rotateRight(node-&gt;right=${workNode.right.key})</code>.`,
+      cs
+    );
+    workNode.right = doRotateRight(workNode.right, cs);
+
+    // Step 2: rotateLeft on node
+    pushStep(
+      snap(_workRoot, { [workNode.id]: 'rotate', [workNode.right.id]: 'rotate' }),
+      'insert', 'in33',
+      `RL Step 2: <code>rotateLeft(node=${workNode.key})</code>.`,
+      cs
+    );
+    return doRotateLeft(workNode, cs);
+  }
+
+  // balanced, no rotation needed
+  pushStep(
+    snap(_workRoot, { [workNode.id]: 'active' }),
+    'insert', 'in35',
+    `Node <code>${workNode.key}</code> is balanced (<code>bf=${bf}</code>). Return it unchanged.`,
+    cs
+  );
+  return workNode;
+}
+
+// ── rotateRight (with step recording) ────────────────────────
+function doRotateRight(z, cs) {
+  const y  = z.left;
+  const T3 = y.right;
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateRight', 'rr1',
+    `<code>rotateRight(z=${z.key})</code>: <code>y = z-&gt;left = ${y.key}</code>. <code>y</code> will become the new subtree root.`, cs);
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateRight', 'rr2',
+    `<code>T3 = y-&gt;right = ${T3 ? T3.key : 'NULL'}</code>. Save T3 — it will be rehung onto z.`, cs);
+
+  // perform the rotation on the working copy
+  y.right = z;
+  z.left  = T3;
+  updH(z); updH(y);
+  // update _workRoot if z was the root
+  if (_workRoot === z) _workRoot = y;
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateRight', 'rr3',
+    `<code>y-&gt;right = z</code>: node <code>${z.key}</code> is now the right child of <code>${y.key}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateRight', 'rr4',
+    `<code>z-&gt;left = T3</code>: T3 (${T3 ? T3.key : 'NULL'}) rehung as left child of <code>${z.key}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [z.id]: 'active', [y.id]: 'rotate' }),
+    'rotateRight', 'rr5',
+    `Update <code>z-&gt;height</code>: <code>h(${z.key}) = 1 + max(${getH(z.left)}, ${getH(z.right)}) = ${z.height}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [y.id]: 'new', [z.id]: 'active' }),
+    'rotateRight', 'rr8',
+    `Update <code>y-&gt;height</code>: <code>h(${y.key}) = 1 + max(${getH(y.left)}, ${getH(y.right)}) = ${y.height}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [y.id]: 'new', [z.id]: 'active' }),
+    'rotateRight', 'rr11',
+    `✅ <b>Right rotation complete.</b> <code>${y.key}</code> is the new subtree root. <code>${z.key}</code> is its right child.`, cs);
+
+  return y;
+}
+
+// ── rotateLeft (with step recording) ─────────────────────────
+function doRotateLeft(z, cs) {
+  const y  = z.right;
+  const T2 = y.left;
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateLeft', 'rl1',
+    `<code>rotateLeft(z=${z.key})</code>: <code>y = z-&gt;right = ${y.key}</code>. <code>y</code> will become the new subtree root.`, cs);
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateLeft', 'rl2',
+    `<code>T2 = y-&gt;left = ${T2 ? T2.key : 'NULL'}</code>. Save T2 — it will be rehung onto z.`, cs);
+
+  // perform the rotation
+  y.left  = z;
+  z.right = T2;
+  updH(z); updH(y);
+  if (_workRoot === z) _workRoot = y;
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateLeft', 'rl3',
+    `<code>y-&gt;left = z</code>: node <code>${z.key}</code> is now the left child of <code>${y.key}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [z.id]: 'rotate', [y.id]: 'rotate' }),
+    'rotateLeft', 'rl4',
+    `<code>z-&gt;right = T2</code>: T2 (${T2 ? T2.key : 'NULL'}) rehung as right child of <code>${z.key}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [z.id]: 'active', [y.id]: 'rotate' }),
+    'rotateLeft', 'rl5',
+    `Update <code>z-&gt;height</code>: <code>h(${z.key}) = 1 + max(${getH(z.left)}, ${getH(z.right)}) = ${z.height}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [y.id]: 'new', [z.id]: 'active' }),
+    'rotateLeft', 'rl8',
+    `Update <code>y-&gt;height</code>: <code>h(${y.key}) = 1 + max(${getH(y.left)}, ${getH(y.right)}) = ${y.height}</code>.`, cs);
+
+  pushStep(snap(_workRoot, { [y.id]: 'new', [z.id]: 'active' }),
+    'rotateLeft', 'rl11',
+    `✅ <b>Left rotation complete.</b> <code>${y.key}</code> is the new subtree root. <code>${z.key}</code> is its left child.`, cs);
+
+  return y;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  insertRaw — no recording, used to build/rebuild canonical tree
+// ═══════════════════════════════════════════════════════════════
+function insertRaw(node, key) {
+  if (!node) return new AVLNode(key);
+  if (key < node.key)      node.left  = insertRaw(node.left,  key);
+  else if (key > node.key) node.right = insertRaw(node.right, key);
+  else return node;
+  updH(node);
+  const bf = getBF(node);
+  if (bf >  1 && key < node.left.key)  return rotRaw('R', node);
+  if (bf < -1 && key > node.right.key) return rotRaw('L', node);
+  if (bf >  1 && key > node.left.key)  { node.left  = rotRaw('L', node.left);  return rotRaw('R', node); }
+  if (bf < -1 && key < node.right.key) { node.right = rotRaw('R', node.right); return rotRaw('L', node); }
+  return node;
+}
+function rotRaw(dir, z) {
+  if (dir === 'R') {
+    const y = z.left, T3 = y.right;
+    y.right = z; z.left = T3; updH(z); updH(y); return y;
+  } else {
+    const y = z.right, T2 = y.left;
+    y.left = z; z.right = T2; updH(z); updH(y); return y;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PUBLIC: doInsert — called by the UI
+// ═══════════════════════════════════════════════════════════════
+function startInsert() {
+  const inp = document.getElementById('val-input');
+  const val = parseInt(inp.value);
+  if (isNaN(val) || val < 1 || val > 9999) { showToast('Enter a number 1–9999'); return; }
+  inp.value = '';
+  doInsert(val);
+}
+
+function doInsert(val) {
+  stopAuto();
+  steps   = [];
+  stepIdx = -1;
+
+  // 1. Build the working copy from the current canonical tree
+  _workRoot = cloneTree(treeRoot);
+
+  // 2. Run the traced insert — this populates `steps[]` and mutates _workRoot
+  _workRoot = tracedInsert(_workRoot, val, []);
+
+  // Fix up the "null node created" step snapshot: after tracedInsert returns
+  // the new node, _workRoot already has it, but the snapshot taken inside the
+  // null-branch was captured before the parent pointer was set.
+  // Easiest fix: re-snapshot that step (it's always the second step if root was null,
+  // or a mid-sequence step otherwise). We just rebuild the canonical tree and
+  // overwrite the last snapshot with the new node highlighted.
+  treeRoot = insertRaw(cloneTree(treeRoot), val);
+
+  // Patch any step whose snapshot is missing the new node
+  const newNodeInCanon = findByKey(treeRoot, val);
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.lineId === 'in3' && !findByKey(s.treeSnapshot, val)) {
+      s.treeSnapshot = withStates(cloneTree(treeRoot), { [newNodeInCanon.id]: 'new' });
+    }
+  }
+
+  stepIdx = 0;
+  applyStep(0);
+  updateNavButtons();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STEP UI
+// ═══════════════════════════════════════════════════════════════
+function applyStep(idx) {
+  if (idx < 0 || idx >= steps.length) return;
+  stepIdx = idx;
+  const s = steps[idx];
+
+  showFn(s.fn, false);   // switch tab without re-rendering lines
+
+  // highlight line
+  document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById('line-' + s.lineId);
+  if (target) {
+    target.classList.add('active');
+    target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  document.getElementById('explain-text').innerHTML = s.explain;
+  document.getElementById('step-curr').textContent  = idx + 1;
+  document.getElementById('step-total').textContent = steps.length;
+
+  renderCallStack(s.callStack);
+  drawTree(s.treeSnapshot);
+  updateNavButtons();
+}
+
+function stepDir(dir) {
+  const next = stepIdx + dir;
+  if (next >= 0 && next < steps.length) applyStep(next);
+}
+
+function updateNavButtons() {
+  const has = steps.length > 0;
+  document.getElementById('btn-prev').disabled = !has || stepIdx <= 0;
+  document.getElementById('btn-next').disabled = !has || stepIdx >= steps.length - 1;
+  document.getElementById('btn-auto').disabled = !has;
+}
+
+let autoRunning = false;
+function toggleAuto() {
+  autoRunning = !autoRunning;
+  const btn = document.getElementById('btn-auto');
+  if (autoRunning) {
+    btn.textContent = '⏸ Pause';
+    btn.style.borderColor = 'var(--warn)';
+    runAuto();
+  } else {
+    stopAuto();
+  }
+}
+function stopAuto() {
+  autoRunning = false;
+  clearTimeout(autoTimer);
+  const btn = document.getElementById('btn-auto');
+  if (btn) { btn.textContent = '▶ Auto'; btn.style.borderColor = ''; }
+}
+function runAuto() {
+  if (!autoRunning) return;
+  if (stepIdx >= steps.length - 1) { stopAuto(); return; }
+  stepDir(1);
+  autoTimer = setTimeout(runAuto, 750);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CODE PANEL
+// ═══════════════════════════════════════════════════════════════
+let currentFn = 'insert';
+
+function showFn(fn, switchTab) {
+  if (switchTab === undefined) switchTab = true;
+  if (switchTab || currentFn !== fn) {
+    currentFn = fn;
+    document.querySelectorAll('.fn-tab').forEach(t => t.classList.toggle('active', t.dataset.fn === fn));
+    const lines = document.getElementById('code-lines');
+    lines.innerHTML = '';
+    (C_CODE[fn] || []).forEach((l, i) => {
+      const div = document.createElement('div');
+      div.className = 'code-line';
+      div.id = 'line-' + l.id;
+      div.innerHTML = `<span class="ln">${i+1}</span><span class="code-text">${l.text}</span>`;
+      lines.appendChild(div);
+    });
+  }
+  // re-apply highlight for current step
+  if (steps.length > 0 && stepIdx >= 0) {
+    document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+    const s = steps[stepIdx];
+    if (s.fn === fn) {
+      const t = document.getElementById('line-' + s.lineId);
+      if (t) t.classList.add('active');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CALL STACK
+// ═══════════════════════════════════════════════════════════════
+function renderCallStack(stack) {
+  const el = document.getElementById('call-stack');
+  el.innerHTML = '';
+  if (!stack || stack.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-family:JetBrains Mono,monospace;font-size:11px;padding:8px">Empty</div>';
+    return;
+  }
+  [...stack].reverse().forEach((frame, i) => {
+    const div = document.createElement('div');
+    div.className = 'cs-frame' + (i === 0 ? ' active' : '');
+    div.innerHTML = `<div class="cs-fn">${frame.fn}</div>
+      <div class="cs-arg">key = ${frame.arg}</div>
+      <div class="cs-info">node = ${frame.node}</div>`;
+    el.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CANVAS DRAWING
+// ═══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('tree-canvas');
+const ctx    = canvas.getContext('2d');
+const NODE_R  = 22;
+const LEVEL_H = 72;
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  if (steps.length > 0 && stepIdx >= 0) drawTree(steps[stepIdx].treeSnapshot);
+  else drawTree(treeRoot);
+}
+window.addEventListener('resize', resizeCanvas);
+
+function treeDepth(n) { return n ? 1 + Math.max(treeDepth(n.left), treeDepth(n.right)) : 0; }
+
+function assignPos(n, x, y, spread) {
+  if (!n) return;
+  n.x = x; n.y = y;
+  assignPos(n.left,  x - spread, y + LEVEL_H, spread / 2);
+  assignPos(n.right, x + spread, y + LEVEL_H, spread / 2);
+}
+
+function drawTree(root) {
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  ctx.clearRect(0, 0, W, H);
+  if (!root) {
+    ctx.font = '14px Outfit,sans-serif';
+    ctx.fillStyle = cssVar('--muted');
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Insert a value to build the AVL tree', W/2, H/2);
+    return;
+  }
+  const d = treeDepth(root);
+  const spread = Math.min(W/3.2, Math.pow(2, d-1) * NODE_R * 1.9);
+  assignPos(root, W/2, NODE_R * 2.5, spread);
+
+  // edges
+  function drawEdges(n) {
+    if (!n) return;
+    ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 1.5;
+    if (n.left)  { ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(n.left.x,n.left.y);   ctx.stroke(); drawEdges(n.left);  }
+    if (n.right) { ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(n.right.x,n.right.y); ctx.stroke(); drawEdges(n.right); }
+  }
+  drawEdges(root);
+
+  // nodes
+  function drawNodes(n) {
+    if (!n) return;
+    const st = n.state || 'normal';
+    const accent  = cssVar('--accent');
+    const accent2 = cssVar('--accent2');
+    const warn    = cssVar('--warn');
+    const muted   = cssVar('--muted');
+    const textCol = cssVar('--text');
+
+    let fill, border, txtColor;
+    if (isDayMode) {
+      txtColor = cssVar('--text');
+      if      (st==='active')  { fill='#dbeafe'; border=accent; }
+      else if (st==='new')     { fill='#dcfce7'; border=accent2; }
+      else if (st==='rotate')  { fill='#fef3c7'; border=warn; txtColor='#92400e'; }
+      else if (st==='compare') { fill='#fef9c3'; border=warn; txtColor='#713f12'; }
+      else                     { fill=cssVar('--surface2'); border=cssVar('--border'); }
+    } else {
+      txtColor = '#e6edf3';
+      if      (st==='active')  { fill='#1f4068'; border='#58a6ff'; }
+      else if (st==='new')     { fill='#0a3d13'; border='#3fb950'; }
+      else if (st==='rotate')  { fill='#4a2000'; border='#e3b341'; }
+      else if (st==='compare') { fill='#2d2a00'; border='#e3b341'; txtColor='#ffd700'; }
+      else                     { fill='#21262d'; border='#444c56'; }
+    }
+
+    ctx.shadowColor = st!=='normal' ? border : 'transparent';
+    ctx.shadowBlur  = st!=='normal' ? 10 : 0;
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, NODE_R, 0, Math.PI*2);
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = border; ctx.lineWidth = st!=='normal' ? 2.5 : 1.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // key label
+    ctx.font = `bold ${n.key>=100?11:13}px JetBrains Mono,monospace`;
+    ctx.fillStyle = txtColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.key, n.x, n.y);
+
+    // height + bf below node
+    const bf = getH(n.left) - getH(n.right);
+    ctx.font = '9px JetBrains Mono,monospace';
+    ctx.fillStyle = muted;
+    ctx.fillText('h='+n.height, n.x, n.y+NODE_R+11);
+    ctx.fillStyle = Math.abs(bf)>1 ? cssVar('--danger') : accent2;
+    ctx.fillText('bf='+bf, n.x, n.y+NODE_R+21);
+
+    drawNodes(n.left); drawNodes(n.right);
+  }
+  drawNodes(root);
+}
+
+function findByKey(root, key) {
+  if (!root) return null;
+  if (root.key === key) return root;
+  return findByKey(root.left, key) || findByKey(root.right, key);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RESET + EXAMPLES
+// ═══════════════════════════════════════════════════════════════
+function resetTree() {
+  stopAuto();
+  treeRoot = null; _workRoot = null;
+  steps = []; stepIdx = -1;
+  document.getElementById('explain-text').textContent = 'Insert a value to begin step-by-step execution.';
+  document.getElementById('step-curr').textContent  = '—';
+  document.getElementById('step-total').textContent = '—';
+  renderCallStack([]);
+  updateNavButtons();
+  showFn('insert');
+  drawTree(null);
+  showToast('Tree reset');
+}
+
+function loadExample(type) {
+  resetTree();
+  let seq = [];
+  if (type==='ll') seq=[30,20,10];
+  if (type==='rr') seq=[10,20,30];
+  if (type==='lr') seq=[30,10,20];
+  if (type==='rl') seq=[10,30,20];
+  for (let i=0; i<seq.length-1; i++) treeRoot = insertRaw(treeRoot, seq[i]);
+  drawTree(treeRoot);
+  showToast(`Pre-loaded ${seq.slice(0,-1).join(', ')}. Now stepping through insert(${seq[seq.length-1]})…`);
+  setTimeout(() => doInsert(seq[seq.length-1]), 300);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DAY / NIGHT THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════
+let isDayMode = false;
+
+function toggleTheme() {
+  isDayMode = !isDayMode;
+  document.body.classList.toggle('day-mode', isDayMode);
+  document.getElementById('theme-icon').textContent  = isDayMode ? '🌙' : '☀️';
+  document.getElementById('theme-label').textContent = isDayMode ? 'Night Mode' : 'Day Mode';
+  // Redraw canvas with updated colours
+  if (steps.length > 0 && stepIdx >= 0) drawTree(steps[stepIdx].treeSnapshot);
+  else drawTree(treeRoot);
+}
+
+// Helper: get a CSS variable value (resolves day/night automatically)
+function cssVar(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName==='INPUT') return;
+  if (e.key==='ArrowLeft')  stepDir(-1);
+  if (e.key==='ArrowRight') stepDir(1);
+  if (e.key===' ') { e.preventDefault(); toggleAuto(); }
+});
+document.getElementById('val-input').addEventListener('keydown', e => {
+  if (e.key==='Enter') startInsert();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  PANEL RESIZE
+// ═══════════════════════════════════════════════════════════════
+function makeResizable(handleId, getPanelA, getPanelB, minA, minB) {
+  const handle = document.getElementById(handleId);
+  if (!handle) return;
+  let dragging=false, startX, startWA, startWB;
+
+  function startDrag(clientX) {
+    dragging=true; startX=clientX;
+    startWA=getPanelA().getBoundingClientRect().width;
+    startWB=getPanelB().getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.cursor='col-resize';
+    document.body.style.userSelect='none';
+  }
+  function moveDrag(clientX) {
+    if (!dragging) return;
+    const dx=clientX-startX;
+    let wA=startWA+dx, wB=startWB-dx;
+    if (wA<minA){wA=minA;wB=startWA+startWB-minA;}
+    if (wB<minB){wB=minB;wA=startWA+startWB-minB;}
+    getPanelA().style.width=wA+'px'; getPanelA().style.flexShrink='0';
+    getPanelB().style.width=wB+'px'; getPanelB().style.flexShrink='0';
+    resizeCanvas();
+  }
+  function endDrag() {
+    if (!dragging) return;
+    dragging=false; handle.classList.remove('dragging');
+    document.body.style.cursor=''; document.body.style.userSelect='';
+    resizeCanvas();
+  }
+  handle.addEventListener('mousedown', e=>{startDrag(e.clientX);e.preventDefault();});
+  document.addEventListener('mousemove', e=>moveDrag(e.clientX));
+  document.addEventListener('mouseup', endDrag);
+  handle.addEventListener('touchstart', e=>{startDrag(e.touches[0].clientX);e.preventDefault();},{passive:false});
+  document.addEventListener('touchmove', e=>{if(dragging)moveDrag(e.touches[0].clientX);},{passive:false});
+  document.addEventListener('touchend', endDrag);
+}
+
+makeResizable('resize-left',
+  ()=>document.querySelector('.code-panel'),
+  ()=>document.querySelector('.tree-panel'), 200, 200);
+makeResizable('resize-right',
+  ()=>document.querySelector('.tree-panel'),
+  ()=>document.querySelector('.call-stack-panel'), 200, 140);
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+showFn('insert');
+renderCallStack([]);
+resizeCanvas();
+drawTree(null);
+updateNavButtons();
+</script>
+</body>
+</html>

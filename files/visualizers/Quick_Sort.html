@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quick Sort: Global Array Flow</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 10px; display: flex; flex-direction: column; align-items: center; margin: 0; height: 100vh; overflow: hidden; }
+        .main-layout { display: flex; gap: 10px; width: 100%; max-width: 1300px; height: 280px; align-items: stretch; margin-bottom: 10px; }
+        
+        .viz-section { flex: 2; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; }
+        .controls { text-align: center; margin-bottom: 5px; }
+        .array-container { display: flex; justify-content: center; margin-top: 35px; gap: 4px; height: 50px; }
+        
+        .debug-overlay { position: absolute; bottom: 5px; left: 5px; width: 280px; height: 75px; background: rgba(0,0,0,0.85); color: #0f0; 
+                          font-family: monospace; font-size: 10px; padding: 5px; border-radius: 4px; overflow-y: auto; border: 1px solid #444; }
+
+        .code-section { flex: 1; background: #282c34; color: #abb2bf; padding: 10px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 11px; overflow-y: auto; }
+        .code-line { display: block; padding: 1px 4px; border-left: 3px solid transparent; line-height: 1.3; }
+        .highlight-code { background: #4b5263; color: #fff; border-left: 3px solid #f1c40f; }
+
+        .cell { width: 34px; height: 34px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-weight: bold; background: white; border-radius: 4px; position: relative; font-size: 13px; }
+        .pivot { background: #f1c40f !important; transform: translateY(-4px); }
+        .ptr-i::after { content: 'i'; position: absolute; bottom: -20px; color: #e74c3c; font-weight: bold; }
+        .ptr-j::after { content: 'j'; position: absolute; top: -24px; color: #8e44ad; font-weight: bold; }
+        .sorted { background: #2ecc71 !important; color: white; }
+
+        /* Tree Section - Adjusted for label spacing */
+        .tree-section { width: 100%; max-width: 1300px; background: white; flex-grow: 1; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: auto; padding: 20px; }
+        .tree ul { padding-top: 40px; position: relative; display: flex; justify-content: center; padding-left: 0; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 45px 5px 0 5px; }
+        
+        /* Edge Labels - Fixed Overlap */
+        .edge-label { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 9px; background: #fff; padding: 2px 8px; color: #555; border: 1px solid #ccc; border-radius: 4px; z-index: 10; white-space: nowrap; font-family: monospace; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .scope-part { color: #3498db; font-weight: bold; background: #f0f7ff; padding: 0 2px; border-radius: 2px; }
+        .outside-part { color: #ccc; }
+
+        /* Increased height of connectors to 45px to prevent text overlap */
+        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #ccc; width: 50%; height: 45px; }
+        .tree li::after { right: auto; left: 50%; border-left: 2px solid #ccc; }
+        .tree li:only-child::before, .tree li:only-child::after { display: none; }
+        .tree li:only-child { padding-top: 0; }
+        .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+        .tree li:last-child::before { border-right: 2px solid #ccc; border-radius: 0 5px 0 0; }
+        .tree li:first-child::after { border-radius: 5px 0 0 0; }
+        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #ccc; width: 0; height: 45px; }
+
+        .node-box { border: 2px solid #cfd8dc; padding: 6px; font-size: 10px; display: inline-block; border-radius: 6px; background: #fff; min-width: 140px; text-align: center; transition: 0.3s; z-index: 5; position: relative; }
+        .node-range { font-weight: bold; display: block; border-bottom: 1px solid #eceff1; margin-bottom: 4px; color: #455a64; }
+        .node-status { font-size: 8px; text-transform: uppercase; display: block; margin-top: 2px; }
+        .node-values { font-family: monospace; font-size: 9px; color: #555; margin-top: 5px; display: block; min-height: 12px; }
+        
+        .status-waiting { color: #90a4ae; }
+        .status-processing { color: #1e88e5; font-weight: bold; }
+        .status-returned { color: #43a047; font-weight: bold; }
+
+        .node-box.active { border-color: #1e88e5; box-shadow: 0 0 10px rgba(30,136,229,0.3); background: #f1f8ff; }
+        .node-box.returned-bg { background: #f1f8e9; border-color: #43a047; }
+        .mod-val { color: #2ecc71; font-weight: bold; }
+
+        button { padding: 6px 14px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; margin: 0 3px; font-size: 12px; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="main-layout">
+    <div class="viz-section">
+        <div class="controls">
+            <button onclick="moveStep(-1)" style="background: #e67e22;">Back</button>
+            <button onclick="moveStep(1)" style="background: #2ecc71;">Next</button>
+            <button onclick="location.reload()" style="background:#95a5a6;">Reset</button>
+        </div>
+        <div id="visualizer" class="array-container"></div>
+        <div id="debug" class="debug-overlay">Log: System Ready...</div>
+    </div>
+
+    <div class="code-section">
+        <div class="code-line" id="line-1">function quickSort(arr, L, R) {</div>
+        <div class="code-line" id="line-2">&nbsp;&nbsp;if (L >= R) return;</div>
+        <div class="code-line" id="line-4">&nbsp;&nbsp;p = getMedian(arr,L,R);</div>
+        <div class="code-line" id="line-5">&nbsp;&nbsp;swap(arr, pIdx, R);</div>
+        <div class="code-line" id="line-7">&nbsp;&nbsp;let i=L, j=R-1;</div>
+        <div class="code-line" id="line-8">&nbsp;&nbsp;while (i < j) {</div>
+        <div class="code-line" id="line-9">&nbsp;&nbsp;&nbsp;&nbsp;while (arr[i] < p) i++;</div>
+        <div class="code-line" id="line-10">&nbsp;&nbsp;&nbsp;&nbsp;while (i < j && arr[j] > p) j--;</div>
+        <div class="code-line" id="line-11">&nbsp;&nbsp;&nbsp;&nbsp;if (i < j) swap(i, j);</div>
+        <div class="code-line" id="line-12">&nbsp;&nbsp;}</div>
+        <div class="code-line" id="line-14">&nbsp;&nbsp;swap(arr, i, R);</div>
+        <div class="code-line" id="line-15">&nbsp;&nbsp;quickSort(L, i-1);</div>
+        <div class="code-line" id="line-16">&nbsp;&nbsp;quickSort(i+1, R);</div>
+        <div class="code-line" id="line-17">}</div>
+    </div>
+</div>
+
+<div class="tree-section">
+    <div class="tree" id="tree-root"></div>
+</div>
+
+<script>
+    const data = [8, 1, 4, 9, 0, 6, 5, 2, 7, 3];
+    let states = [];
+    let treeData = null; 
+    let currentIdx = 0;
+
+    function formatArrayWithScope(inputArr, L, R) {
+        let res = "";
+        inputArr.forEach((v, idx) => {
+            if (idx === L) res += "{";
+            if (idx >= L && idx <= R) res += `<span class="scope-part">${v}</span>`;
+            else res += `<span class="outside-part">${v}</span>`;
+            if (idx === R) res += "}";
+            if (idx < inputArr.length - 1) res += ",";
+        });
+        return res;
+    }
+
+    function generateStates() {
+        let arr = [...data]; let sorted = []; let steps = []; let returnedNodes = []; let idCounter = 0;
+        let nodeResults = {}; 
+
+        function save(msg, line, p1=null, p2=null, piv=null, nodeId=null, isRet=false) {
+            if(isRet) {
+                returnedNodes.push(nodeId);
+                const match = nodeId.split('-')[1];
+                const nodeRef = treeNodesFlat[match];
+                let arrayHtml = "";
+                arr.forEach((val, idx) => {
+                    if (idx >= nodeRef.L && idx <= nodeRef.R) arrayHtml += `<span class="mod-val">${val}</span>`;
+                    else arrayHtml += `<span>${val}</span>`;
+                    if (idx < arr.length - 1) arrayHtml += ",";
+                });
+                nodeResults[nodeId] = arrayHtml;
+            }
+            steps.push({ arr: [...arr], msg, line, p1, p2, piv, sorted: [...sorted], nodeId, returned: [...returnedNodes], results: {...nodeResults} });
+        }
+
+        let treeNodesFlat = [];
+        function runSort(L, R) {
+            const nodeId = `node-${idCounter++}`;
+            const inputVisual = formatArrayWithScope(arr, L, R);
+            const node = { id: nodeId, label: `Range [${L},${R}]`, L, R, input: inputVisual, children: [] };
+            treeNodesFlat.push(node);
+
+            save(`Calling quickSort(${L}, ${R})`, 2, null, null, null, nodeId);
+            if (L < R) {
+                let mid = Math.floor((L+R)/2);
+                let cand = [{v:arr[L], i:L},{v:arr[mid], i:mid},{v:arr[R], i:R}].sort((a,b)=>a.v-b.v);
+                let pIdx = cand[1].i; let pVal = arr[pIdx];
+                save(`Selecting pivot: ${pVal}`, 4, null, null, pIdx, nodeId);
+                [arr[pIdx], arr[R]] = [arr[R], arr[pIdx]];
+                save(`Swapped pivot to end`, 5, null, null, R, nodeId);
+                
+                let i = L, j = R - 1;
+                while (i < j) {
+                    while (i < j && arr[i] < pVal) { i++; save(`Increment i`, 9, i, j, R, nodeId); }
+                    while (i < j && arr[j] > pVal) { j--; save(`Decrement j`, 10, i, j, R, nodeId); }
+                    if (i < j) { [arr[i], arr[j]] = [arr[j], arr[i]]; save(`Swapping values`, 11, i, j, R, nodeId); }
+                }
+                let sPos = (arr[i] > pVal) ? i : i + 1;
+                [arr[sPos], arr[R]] = [arr[R], arr[sPos]];
+                sorted.push(sPos);
+                save(`Partitioning complete`, 14, sPos, null, null, nodeId);
+                
+                node.children.push(runSort(L, sPos - 1));
+                node.children.push(runSort(sPos + 1, R));
+                save(`Returning from call`, 17, null, null, null, nodeId, true);
+            } else {
+                if(L===R) sorted.push(L);
+                save(`Base Case`, 2, null, null, null, nodeId, true);
+            }
+            return node;
+        }
+        treeData = runSort(0, arr.length - 1);
+        return steps;
+    }
+
+    function buildTreeHTML(node, isRoot=false) {
+        let html = `<li>
+            ${!isRoot ? `<div class="edge-label">${node.input}</div>` : ''}
+            <div class="node-box" id="${node.id}">
+                <span class="node-range">${node.label}</span>
+                <span class="node-status" id="stat-${node.id}">Waiting</span>
+                <div class="node-values" id="vals-${node.id}"></div>
+            </div>`;
+        if (node.children.length) html += `<ul>${node.children.map(child => buildTreeHTML(child)).join('')}</ul>`;
+        return html + `</li>`;
+    }
+
+    function render() {
+        const state = states[currentIdx];
+        const viz = document.getElementById('visualizer');
+        viz.innerHTML = '';
+        state.arr.forEach((val, idx) => {
+            const div = document.createElement('div');
+            div.className = `cell ${state.sorted.includes(idx)?'sorted':''} ${state.piv===idx?'pivot':''} ${state.p1===idx?'ptr-i':''} ${state.p2===idx?'ptr-j':''}`;
+            div.innerText = val;
+            viz.appendChild(div);
+        });
+
+        document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight-code'));
+        document.getElementById(`line-${state.line}`)?.classList.add('highlight-code');
+
+        const debug = document.getElementById('debug');
+        debug.innerHTML += `<div>> ${state.msg}</div>`;
+        debug.scrollTop = debug.scrollHeight;
+
+        document.querySelectorAll('.node-box').forEach(el => {
+            el.classList.remove('active', 'returned-bg');
+            const statusLabel = document.getElementById('stat-' + el.id);
+            const valDiv = document.getElementById('vals-' + el.id);
+            statusLabel.innerText = "Wait";
+            valDiv.innerHTML = "";
+            
+            if(state.returned.includes(el.id)) {
+                el.classList.add('returned-bg');
+                statusLabel.innerText = "Returned ✓";
+                statusLabel.className = "node-status status-returned";
+                valDiv.innerHTML = state.results[el.id];
+            }
+            
+            if(state.nodeId === el.id) {
+                el.classList.add('active');
+                if(!state.returned.includes(el.id)) {
+                    statusLabel.innerText = "Processing";
+                    statusLabel.className = "node-status status-processing";
+                }
+            }
+        });
+    }
+
+    function moveStep(dir) { 
+        if(currentIdx + dir >= 0 && currentIdx + dir < states.length) {
+            currentIdx += dir; render(); 
+        }
+    }
+    states = generateStates();
+    document.getElementById('tree-root').innerHTML = `<ul>${buildTreeHTML(treeData, true)}</ul>`;
+    render();
+</script>
+</body>
+</html>

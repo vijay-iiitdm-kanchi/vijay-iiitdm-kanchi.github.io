@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hash Table — Step-by-Step Visualizer</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
+  --border: #30363d; --accent: #58a6ff; --accent2: #3fb950;
+  --warn: #e3b341; --danger: #f85149; --text: #c9d1d9; --muted: #8b949e;
+  --highlight-line: rgba(88,166,255,0.12); --highlight-border: #58a6ff;
+  --purple: #a371f7;
+}
+body.day-mode {
+  --bg: #f6f8fa; --surface: #ffffff; --surface2: #eef1f4;
+  --border: #d0d7de; --accent: #0969da; --accent2: #1a7f37;
+  --warn: #9a6700; --danger: #cf222e; --text: #1f2328; --muted: #656d76;
+  --highlight-line: rgba(9,105,218,0.18); --highlight-border: #0969da;
+  --purple: #8250df;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ── TOP BAR ── */
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+}
+.logo { font-size: 1rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; white-space: nowrap; }
+.logo span { color: var(--accent2); }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+select, input[type=text] {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 5px 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+}
+select { cursor: pointer; }
+select:focus, input:focus { outline: none; border-color: var(--accent); }
+input[type=text] { width: 130px; }
+.btn {
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 12px;
+  padding: 5px 13px; border-radius: 6px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface2); color: var(--text);
+  transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #0d1117; }
+.btn.primary:hover { opacity: 0.85; }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: rgba(248,81,73,0.1); }
+.btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+.theme-toggle { margin-left: auto; }
+.theme-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 12px;
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface2); color: var(--text); transition: all 0.2s;
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.label-sm { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* ── MAIN TABS ── */
+.tab-bar {
+  display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 10px 22px; cursor: pointer; color: var(--muted);
+  border-bottom: 3px solid transparent; border: none; background: none;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
+
+/* ── MAIN LAYOUT ── */
+.main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+/* ── LEFT: CODE PANEL ── */
+.code-panel {
+  width: 380px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--surface); overflow: hidden; border-right: 1px solid var(--border);
+}
+.panel-header {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+  border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+}
+.panel-header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.fn-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+}
+.fn-tabs::-webkit-scrollbar { display: none; }
+.fn-tab {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 7px 13px; cursor: pointer; color: var(--muted);
+  border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s;
+}
+.fn-tab:hover { color: var(--text); }
+.fn-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.code-scroll { flex: 1; overflow-y: auto; padding: 6px 0; }
+.code-scroll::-webkit-scrollbar { width: 4px; }
+.code-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.code-line {
+  display: flex; align-items: flex-start; min-height: 20px; padding: 0 14px;
+  transition: background 0.2s; position: relative;
+}
+.code-line.active {
+  background: var(--highlight-line); border-left: 3px solid var(--highlight-border); padding-left: 11px;
+}
+.ln { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); min-width: 26px; user-select: none; padding-top: 1px; }
+.code-text { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 20px; white-space: pre; }
+.active .code-text { color: #e6edf3; }
+body.day-mode .active .code-text { color: #0d1117; }
+.kw{color:#ff7b72} .fn{color:#d2a8ff} .num{color:#79c0ff}
+.cm{color:var(--muted);font-style:italic} .str{color:#a5d6ff}
+.op{color:#ff7b72} .type{color:#ffa657} .var{color:#c9d1d9}
+
+.explain-box {
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  min-height: 76px; flex-shrink: 0;
+}
+.explain-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.explain-text { font-size: 12.5px; line-height: 1.6; color: var(--text); }
+.explain-text code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+.step-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.step-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+.step-info .curr { color: var(--accent); font-weight: 700; }
+.nav-btns { display: flex; gap: 5px; }
+
+/* ── CENTER: VIZ PANEL ── */
+.viz-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.viz-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; }
+.viz-scroll::-webkit-scrollbar { width: 5px; }
+.viz-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Hash Table Grid */
+.hash-table-wrap { display: flex; flex-direction: column; gap: 4px; }
+.hash-row {
+  display: flex; align-items: stretch; gap: 0; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--border); transition: border-color 0.25s;
+}
+.hash-row.row-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.hash-row.row-collision { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
+.hash-row.row-inserted { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2); }
+.hash-row.row-found { border-color: var(--purple); box-shadow: 0 0 0 1px var(--purple); }
+.hash-idx {
+  min-width: 44px; padding: 0 10px; display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+  background: var(--surface2); border-right: 1px solid var(--border); flex-shrink: 0;
+}
+.hash-cell {
+  flex: 1; min-height: 38px; display: flex; align-items: center; padding: 4px 10px;
+  gap: 6px; flex-wrap: wrap; background: var(--bg); font-size: 12px;
+}
+.hash-cell.empty { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.hash-cell.deleted { color: var(--danger); font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rgba(248,81,73,0.05); }
+.key-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+  color: var(--text); transition: all 0.25s;
+}
+.key-chip.chip-new { background: rgba(63,185,80,0.15); border-color: var(--accent2); color: var(--accent2); }
+.key-chip.chip-active { background: rgba(88,166,255,0.15); border-color: var(--accent); color: var(--accent); }
+.key-chip.chip-collision { background: rgba(227,179,65,0.15); border-color: var(--warn); color: var(--warn); }
+.key-chip.chip-found { background: rgba(163,113,247,0.15); border-color: var(--purple); color: var(--purple); }
+.arrow-link { color: var(--muted); font-size: 14px; }
+.probe-badge {
+  display: inline-flex; align-items: center;
+  background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3);
+  border-radius: 10px; padding: 1px 7px;
+  font-size: 10px; color: var(--accent); font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── RIGHT: INFO PANEL ── */
+.info-panel {
+  width: 210px; flex-shrink: 0; background: var(--surface);
+  display: flex; flex-direction: column; overflow: hidden;
+  border-left: 1px solid var(--border);
+}
+.stats-box { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.stats-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+.stat-key { color: var(--muted); font-size: 11.5px; }
+.stat-val { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 700; }
+.legend { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.legend-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.history-box { flex: 1; overflow-y: auto; padding: 10px 12px; }
+.history-box::-webkit-scrollbar { width: 3px; }
+.history-box::-webkit-scrollbar-thumb { background: var(--border); }
+.hist-item {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 7px; border-radius: 4px; margin-bottom: 3px;
+  background: var(--surface2); color: var(--muted);
+  border-left: 2px solid var(--border);
+}
+.hist-item.hi-ok { border-color: var(--accent2); color: var(--text); }
+.hist-item.hi-col { border-color: var(--warn); }
+
+/* ── RESIZE ── */
+.resize-handle {
+  width: 5px; flex-shrink: 0; background: var(--border); cursor: col-resize;
+  position: relative; z-index: 10; transition: background 0.15s; user-select: none;
+}
+.resize-handle:hover, .resize-handle.dragging { background: var(--accent); }
+.resize-handle::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%); width: 1px; height: 32px;
+  background: currentColor; opacity: 0.4; border-radius: 1px;
+  box-shadow: -2px 0 0 currentColor, 2px 0 0 currentColor;
+}
+
+/* toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 9px 18px; border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+}
+#toast.show { opacity: 1; }
+
+/* speed */
+.speed-wrap { display: flex; align-items: center; gap: 5px; }
+.speed-wrap label { font-size: 11px; color: var(--muted); }
+input[type=range] { width: 60px; accent-color: var(--accent); }
+
+@media (max-width: 900px) { .info-panel { display: none; } .code-panel { width: 300px; } }
+@media (max-width: 650px) {
+  .code-panel { width: 100% !important; border-right: none; border-bottom: 1px solid var(--border); }
+  .main { flex-direction: column; }
+  .viz-panel { min-height: 260px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Hash Table <span>// Visualizer</span></div>
+  <div class="controls">
+    <span class="label-sm">Key:</span>
+    <input type="text" id="key-input" placeholder="e.g. 42" style="width:80px">
+    <button class="btn primary" id="insert-btn" onclick="doInsert()">⊕ Insert</button>
+    <button class="btn" id="search-btn" onclick="doSearch()">⌕ Search</button>
+    <button class="btn danger" onclick="doReset()">⊘ Reset</button>
+  </div>
+  <div class="sep"></div>
+  <div class="controls">
+    <span class="label-sm">Preload:</span>
+    <button class="btn" onclick="loadPreset('small')" style="font-size:11px">Small</button>
+    <button class="btn" onclick="loadPreset('collide')" style="font-size:11px">Collision Demo</button>
+    <button class="btn" onclick="loadPreset('dense')" style="font-size:11px">Dense</button>
+  </div>
+  <div class="sep"></div>
+  <div class="controls">
+    <span class="label-sm">Hash fn:</span>
+    <select id="hash-fn-sel" onchange="onSettingChange()">
+      <option value="mod">h(k) = k % m</option>
+      <option value="mul">Multiplication</option>
+      <option value="djb2">DJB2 (string)</option>
+      <option value="fold">Folding</option>
+    </select>
+    <span class="label-sm">Table size:</span>
+    <select id="table-size-sel" onchange="onSettingChange()">
+      <option value="7">m = 7</option>
+      <option value="11" selected>m = 11</option>
+      <option value="13">m = 13</option>
+      <option value="17">m = 17</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div class="speed-wrap">
+    <label>Speed</label>
+    <input type="range" id="speed-range" min="1" max="5" value="3" oninput="updateSpeed(this.value)">
+  </div>
+  <div class="theme-toggle">
+    <button class="theme-btn" onclick="toggleTheme()">
+      <span id="theme-icon">☀️</span>
+      <span id="theme-label">Day Mode</span>
+    </button>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('chaining')"   id="tab-chaining">🔗 Chaining</button>
+  <button class="tab-btn"        onclick="switchTab('linear')"     id="tab-linear">↕ Linear Probing</button>
+  <button class="tab-btn"        onclick="switchTab('quadratic')"  id="tab-quadratic">∿ Quadratic Probing</button>
+  <button class="tab-btn"        onclick="switchTab('double')"     id="tab-double">⇉ Double Hashing</button>
+</div>
+
+<div class="main">
+
+  <!-- Code panel -->
+  <div class="code-panel" id="code-panel">
+    <div class="panel-header"><div class="dot"></div> C SOURCE CODE</div>
+    <div class="fn-tabs" id="fn-tabs"></div>
+    <div class="code-scroll"><div id="code-lines"></div></div>
+    <div class="explain-box">
+      <div class="explain-label">▶ What's happening</div>
+      <div class="explain-text" id="explain-text">Choose a collision strategy tab, then insert a key or load a preset.</div>
+    </div>
+    <div class="step-nav">
+      <div class="step-info">Step <span class="curr" id="step-curr">—</span> / <span id="step-total">—</span></div>
+      <div class="nav-btns">
+        <button class="btn" id="btn-prev" onclick="stepDir(-1)" disabled>← Prev</button>
+        <button class="btn" id="btn-next" onclick="stepDir(1)"  disabled>Next →</button>
+        <button class="btn" id="btn-auto" onclick="toggleAuto()" disabled>▶ Auto</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="resize-left"></div>
+
+  <!-- Viz panel -->
+  <div class="viz-panel" id="viz-panel">
+    <div class="panel-header"><div class="dot" style="background:var(--accent2)"></div> <span id="viz-title">HASH TABLE — CHAINING</span></div>
+    <div class="viz-scroll" id="viz-scroll">
+      <div class="hash-table-wrap" id="hash-table"></div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="resize-right"></div>
+
+  <!-- Info panel -->
+  <div class="info-panel">
+    <div class="panel-header"><div class="dot" style="background:var(--warn)"></div> STATS</div>
+    <div class="stats-box">
+      <div class="stats-label">Table Info</div>
+      <div class="stat-row"><span class="stat-key">Size (m)</span><span class="stat-val" id="stat-m">11</span></div>
+      <div class="stat-row"><span class="stat-key">Inserted</span><span class="stat-val" id="stat-n">0</span></div>
+      <div class="stat-row"><span class="stat-key">Load factor</span><span class="stat-val" id="stat-lf">0.00</span></div>
+      <div class="stat-row"><span class="stat-key">Collisions</span><span class="stat-val" id="stat-col">0</span></div>
+      <div class="stat-row"><span class="stat-key">Probes (last)</span><span class="stat-val" id="stat-probes">—</span></div>
+    </div>
+    <div class="legend">
+      <div class="legend-title">Legend</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--accent2)"></div> Inserted</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--accent)"></div> Probing</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--warn)"></div> Collision</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div> Found</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--danger)"></div> Deleted</div>
+    </div>
+    <div class="stats-box" style="border-top:1px solid var(--border)">
+      <div class="stats-label">Insert Log</div>
+    </div>
+    <div class="history-box" id="history-box"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let currentTab = 'chaining';
+let tableSize = 11;
+let hashFn = 'mod';
+let steps = [], stepIdx = -1;
+let autoTimer = null, autoDelay = 800;
+let isDayMode = false;
+let totalCollisions = 0, totalInserted = 0;
+
+// Table state per strategy
+// Chaining: array of arrays
+// Open addressing: flat array (null=empty, -1=deleted)
+let chainTable = [];   // array of arrays
+let openTable  = [];   // flat array for linear/quad/double
+
+function initTables() {
+  tableSize = parseInt(document.getElementById('table-size-sel').value);
+  hashFn    = document.getElementById('hash-fn-sel').value;
+  chainTable = Array.from({length: tableSize}, () => []);
+  openTable  = new Array(tableSize).fill(null);
+  totalCollisions = 0; totalInserted = 0;
+  document.getElementById('history-box').innerHTML = '';
+  updateStats();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HASH FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+function hashKey(k, m, fn) {
+  fn = fn || hashFn;
+  if (fn === 'mod')  return ((k % m) + m) % m;
+  if (fn === 'mul') {
+    const A = 0.6180339887;
+    return Math.floor(m * ((k * A) % 1));
+  }
+  if (fn === 'djb2') {
+    // treat k as string of digits
+    let h = 5381;
+    String(k).split('').forEach(c => { h = ((h << 5) + h) + c.charCodeAt(0); h = h & 0x7fffffff; });
+    return h % m;
+  }
+  if (fn === 'fold') {
+    let s = String(Math.abs(k)), sum = 0;
+    for (let i = 0; i < s.length; i += 2) sum += parseInt(s.slice(i, i+2));
+    return sum % m;
+  }
+  return ((k % m) + m) % m;
+}
+
+function hashKey2(k, m) {
+  // For double hashing: h2(k) = 1 + (k % (m-1))
+  const p = m - 1;
+  return 1 + (((k % p) + p) % p);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  C CODE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+function c(text) { return { text }; }
+function cid(id, text) { return { id, text }; }
+
+function kw(s){return`<span class="kw">${s}</span>`}
+function fn_(s){return`<span class="fn">${s}</span>`}
+function num(s){return`<span class="num">${s}</span>`}
+function cm(s){return`<span class="cm">${s}</span>`}
+function ty(s){return`<span class="type">${s}</span>`}
+function st(s){return`<span class="str">${s}</span>`}
+
+const C_CODE = {
+  // ── HASH FUNCTIONS ──
+  hash_mod: [
+    cid('hm0', `${cm('/* Division Method */')}`),
+    cid('hm1', `${ty('int')} ${fn_('hash')}(${ty('int')} key, ${ty('int')} m) {`),
+    cid('hm2', `  ${kw('return')} ((key % m) + m) % m;`),
+    cid('hm3', `}`),
+  ],
+  hash_mul: [
+    cid('hu0', `${cm('/* Multiplication Method */')}`),
+    cid('hu1', `${cm('/* A = (√5 - 1)/2 ≈ 0.618 */')}`),
+    cid('hu2', `${ty('int')} ${fn_('hash')}(${ty('int')} key, ${ty('int')} m) {`),
+    cid('hu3', `  ${ty('double')} A = ${num('0.6180339887')};`),
+    cid('hu4', `  ${ty('double')} frac = fmod(key * A, ${num('1.0')});`),
+    cid('hu5', `  ${kw('return')} (${ty('int')})(m * frac);`),
+    cid('hu6', `}`),
+  ],
+  hash_djb2: [
+    cid('hd0', `${cm('/* DJB2 (string/digit hash) */')}`),
+    cid('hd1', `${ty('int')} ${fn_('hash')}(${ty('int')} key, ${ty('int')} m) {`),
+    cid('hd2', `  ${ty('unsigned long')} h = ${num('5381')};`),
+    cid('hd3', `  ${ty('char')} s[${num('20')}]; ${fn_('sprintf')}(s, ${st('"%d"')}, key);`),
+    cid('hd4', `  ${kw('for')} (${ty('int')} i=${num('0')}; s[i]; i++)`),
+    cid('hd5', `    h = ((h << ${num('5')}) + h) + s[i];`),
+    cid('hd6', `  ${kw('return')} (${ty('int')})(h % m);`),
+    cid('hd7', `}`),
+  ],
+  hash_fold: [
+    cid('hf0', `${cm('/* Folding Method */')}`),
+    cid('hf1', `${ty('int')} ${fn_('hash')}(${ty('int')} key, ${ty('int')} m) {`),
+    cid('hf2', `  ${ty('int')} sum = ${num('0')};`),
+    cid('hf3', `  ${kw('while')} (key > ${num('0')}) {`),
+    cid('hf4', `    sum += key % ${num('100')};  ${cm('/* take 2 digits */')}`),
+    cid('hf5', `    key /= ${num('100')};`),
+    cid('hf6', `  }`),
+    cid('hf7', `  ${kw('return')} sum % m;`),
+    cid('hf8', `}`),
+  ],
+
+  // ── CHAINING ──
+  chain_insert: [
+    cid('ci0', `${cm('/* Separate Chaining Insert */')}`),
+    cid('ci1', `${kw('void')} ${fn_('insert')}(Node* table[], ${ty('int')} key) {`),
+    cid('ci2', `  ${ty('int')} idx = ${fn_('hash')}(key, m);`),
+    cid('ci3', `  Node* node = ${fn_('newNode')}(key);`),
+    cid('ci4', `  ${cm('/* Prepend to linked list */')}`),
+    cid('ci5', `  node->next = table[idx];`),
+    cid('ci6', `  table[idx] = node;`),
+    cid('ci7', `}`),
+  ],
+  chain_search: [
+    cid('cs0', `${cm('/* Separate Chaining Search */')}`),
+    cid('cs1', `${ty('int')} ${fn_('search')}(Node* table[], ${ty('int')} key) {`),
+    cid('cs2', `  ${ty('int')} idx = ${fn_('hash')}(key, m);`),
+    cid('cs3', `  Node* curr = table[idx];`),
+    cid('cs4', `  ${kw('while')} (curr != NULL) {`),
+    cid('cs5', `    ${kw('if')} (curr->data == key) ${kw('return')} idx;`),
+    cid('cs6', `    curr = curr->next;`),
+    cid('cs7', `  }`),
+    cid('cs8', `  ${kw('return')} -${num('1')};  ${cm('/* not found */')}`),
+    cid('cs9', `}`),
+  ],
+
+  // ── LINEAR PROBING ──
+  linear_insert: [
+    cid('li0', `${cm('/* Linear Probing Insert */')}`),
+    cid('li1', `${kw('void')} ${fn_('insert')}(${ty('int')} table[], ${ty('int')} key) {`),
+    cid('li2', `  ${ty('int')} idx = ${fn_('hash')}(key, m);`),
+    cid('li3', `  ${ty('int')} i = ${num('0')};`),
+    cid('li4', `  ${kw('while')} (i < m) {`),
+    cid('li5', `    ${ty('int')} probe = (idx + i) % m;`),
+    cid('li6', `    ${kw('if')} (table[probe] == EMPTY) {`),
+    cid('li7', `      table[probe] = key;`),
+    cid('li8', `      ${kw('return')};`),
+    cid('li9', `    }`),
+    cid('li10',`    i++;  ${cm('/* collision — try next slot */')}`),
+    cid('li11',`  }`),
+    cid('li12',`  ${cm('/* table full */')}`),
+    cid('li13',`}`),
+  ],
+  linear_search: [
+    cid('ls0', `${cm('/* Linear Probing Search */')}`),
+    cid('ls1', `${ty('int')} ${fn_('search')}(${ty('int')} table[], ${ty('int')} key) {`),
+    cid('ls2', `  ${ty('int')} idx = ${fn_('hash')}(key, m);`),
+    cid('ls3', `  ${ty('int')} i = ${num('0')};`),
+    cid('ls4', `  ${kw('while')} (i < m) {`),
+    cid('ls5', `    ${ty('int')} probe = (idx + i) % m;`),
+    cid('ls6', `    ${kw('if')} (table[probe] == EMPTY) ${kw('return')} -${num('1')};`),
+    cid('ls7', `    ${kw('if')} (table[probe] == key)   ${kw('return')} probe;`),
+    cid('ls8', `    i++;`),
+    cid('ls9', `  }`),
+    cid('ls10',`  ${kw('return')} -${num('1')};`),
+    cid('ls11',`}`),
+  ],
+
+  // ── QUADRATIC PROBING ──
+  quad_insert: [
+    cid('qi0', `${cm('/* Quadratic Probing Insert */')}`),
+    cid('qi1', `${kw('void')} ${fn_('insert')}(${ty('int')} table[], ${ty('int')} key) {`),
+    cid('qi2', `  ${ty('int')} idx = ${fn_('hash')}(key, m);`),
+    cid('qi3', `  ${ty('int')} i = ${num('0')};`),
+    cid('qi4', `  ${kw('while')} (i < m) {`),
+    cid('qi5', `    ${ty('int')} probe = (idx + i*i) % m;`),
+    cid('qi6', `    ${kw('if')} (table[probe] == EMPTY) {`),
+    cid('qi7', `      table[probe] = key;`),
+    cid('qi8', `      ${kw('return')};`),
+    cid('qi9', `    }`),
+    cid('qi10',`    i++;  ${cm('/* probe i² offset */')}`),
+    cid('qi11',`  }`),
+    cid('qi12',`}`),
+  ],
+  quad_search: [
+    cid('qs0', `${cm('/* Quadratic Probing Search */')}`),
+    cid('qs1', `${ty('int')} ${fn_('search')}(${ty('int')} table[], ${ty('int')} key) {`),
+    cid('qs2', `  ${ty('int')} idx = ${fn_('hash')}(key, m);`),
+    cid('qs3', `  ${ty('int')} i = ${num('0')};`),
+    cid('qs4', `  ${kw('while')} (i < m) {`),
+    cid('qs5', `    ${ty('int')} probe = (idx + i*i) % m;`),
+    cid('qs6', `    ${kw('if')} (table[probe] == EMPTY) ${kw('return')} -${num('1')};`),
+    cid('qs7', `    ${kw('if')} (table[probe] == key)   ${kw('return')} probe;`),
+    cid('qs8', `    i++;`),
+    cid('qs9', `  }`),
+    cid('qs10',`  ${kw('return')} -${num('1')};`),
+    cid('qs11',`}`),
+  ],
+
+  // ── DOUBLE HASHING ──
+  double_insert: [
+    cid('di0', `${cm('/* Double Hashing Insert */')}`),
+    cid('di1', `${cm('/* h2(k) = 1 + (k % (m−1)) */')}`),
+    cid('di2', `${kw('void')} ${fn_('insert')}(${ty('int')} table[], ${ty('int')} key) {`),
+    cid('di3', `  ${ty('int')} h1 = ${fn_('hash')}(key, m);`),
+    cid('di4', `  ${ty('int')} h2 = ${num('1')} + (key % (m - ${num('1')}));`),
+    cid('di5', `  ${ty('int')} i = ${num('0')};`),
+    cid('di6', `  ${kw('while')} (i < m) {`),
+    cid('di7', `    ${ty('int')} probe = (h1 + i*h2) % m;`),
+    cid('di8', `    ${kw('if')} (table[probe] == EMPTY) {`),
+    cid('di9', `      table[probe] = key;`),
+    cid('di10',`      ${kw('return')};`),
+    cid('di11',`    }`),
+    cid('di12',`    i++;  ${cm('/* step by h2 */')}`),
+    cid('di13',`  }`),
+    cid('di14',`}`),
+  ],
+  double_search: [
+    cid('ds0', `${cm('/* Double Hashing Search */')}`),
+    cid('ds1', `${ty('int')} ${fn_('search')}(${ty('int')} table[], ${ty('int')} key) {`),
+    cid('ds2', `  ${ty('int')} h1 = ${fn_('hash')}(key, m);`),
+    cid('ds3', `  ${ty('int')} h2 = ${num('1')} + (key % (m - ${num('1')}));`),
+    cid('ds4', `  ${ty('int')} i = ${num('0')};`),
+    cid('ds5', `  ${kw('while')} (i < m) {`),
+    cid('ds6', `    ${ty('int')} probe = (h1 + i*h2) % m;`),
+    cid('ds7', `    ${kw('if')} (table[probe] == EMPTY) ${kw('return')} -${num('1')};`),
+    cid('ds8', `    ${kw('if')} (table[probe] == key)   ${kw('return')} probe;`),
+    cid('ds9', `    i++;`),
+    cid('ds10',`  }`),
+    cid('ds11',`  ${kw('return')} -${num('1')};`),
+    cid('ds12',`}`),
+  ],
+};
+
+const FN_TABS_MAP = {
+  chaining:  { insert: ['chain_insert','insert()'], search: ['chain_search','search()'], hash: null },
+  linear:    { insert: ['linear_insert','insert()'], search: ['linear_search','search()'], hash: null },
+  quadratic: { insert: ['quad_insert','insert()'], search: ['quad_search','search()'], hash: null },
+  double:    { insert: ['double_insert','insert()'], search: ['double_search','search()'], hash: null },
+};
+
+const HASH_CODE_KEY = { mod:'hash_mod', mul:'hash_mul', djb2:'hash_djb2', fold:'hash_fold' };
+
+let activeFn = 'chain_insert';
+
+// ═══════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+const TAB_LABELS = {
+  chaining:'HASH TABLE — CHAINING',
+  linear:'HASH TABLE — LINEAR PROBING',
+  quadratic:'HASH TABLE — QUADRATIC PROBING',
+  double:'HASH TABLE — DOUBLE HASHING',
+};
+
+function switchTab(tab) {
+  stopAuto();
+  currentTab = tab;
+  steps = []; stepIdx = -1;
+  ['chaining','linear','quadratic','double'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+  document.getElementById('viz-title').textContent = TAB_LABELS[tab];
+  initTables();
+  renderFnTabs();
+  renderViz();
+  document.getElementById('explain-text').innerHTML = 'Enter a key or load a preset to begin.';
+  updateNavButtons();
+}
+
+function renderFnTabs() {
+  const map = FN_TABS_MAP[currentTab];
+  const container = document.getElementById('fn-tabs');
+  container.innerHTML = '';
+  const items = [
+    [map.insert[0], map.insert[1]],
+    [map.search[0], map.search[1]],
+    [HASH_CODE_KEY[hashFn], 'hash()'],
+  ];
+  items.forEach(([fn, label], i) => {
+    const d = document.createElement('div');
+    d.className = 'fn-tab' + (i===0?' active':'');
+    d.textContent = label;
+    d.dataset.fn = fn;
+    d.onclick = () => { activeFn = fn; highlightFnTab(fn); renderCode(fn, stepIdx>=0?steps[stepIdx].lineId:null); };
+    container.appendChild(d);
+  });
+  activeFn = items[0][0];
+  renderCode(activeFn, null);
+}
+
+function highlightFnTab(fn) {
+  document.querySelectorAll('.fn-tab').forEach(t => t.classList.toggle('active', t.dataset.fn===fn));
+}
+
+function renderCode(fn, activeId) {
+  const lines = C_CODE[fn] || [];
+  const container = document.getElementById('code-lines');
+  container.innerHTML = '';
+  lines.forEach((line, i) => {
+    const div = document.createElement('div');
+    div.className = 'code-line' + (line.id===activeId?' active':'');
+    div.id = 'cl-'+line.id;
+    div.innerHTML = `<span class="ln">${String(i+1).padStart(2)}</span><span class="code-text">${line.text}</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  VIZ RENDER
+// ═══════════════════════════════════════════════════════════════
+// highlights: { [idx]: {row:'active'|'collision'|'inserted'|'found', chips:{[pos]:'chip-new'|'chip-collision'|...}} }
+function renderViz(highlights) {
+  highlights = highlights || {};
+  const wrap = document.getElementById('hash-table');
+  wrap.innerHTML = '';
+  for (let i = 0; i < tableSize; i++) {
+    const hl = highlights[i] || {};
+    const row = document.createElement('div');
+    row.className = 'hash-row' + (hl.row ? ' row-'+hl.row : '');
+
+    const idxDiv = document.createElement('div');
+    idxDiv.className = 'hash-idx';
+    idxDiv.textContent = `[${i}]`;
+    row.appendChild(idxDiv);
+
+    const cell = document.createElement('div');
+    cell.className = 'hash-cell';
+
+    if (currentTab === 'chaining') {
+      const chain = chainTable[i];
+      if (chain.length === 0) {
+        cell.classList.add('empty');
+        cell.textContent = 'NULL';
+      } else {
+        chain.forEach((k, pos) => {
+          const chip = document.createElement('span');
+          chip.className = 'key-chip' + (hl.chips&&hl.chips[pos] ? ' '+hl.chips[pos] : '');
+          chip.textContent = k;
+          cell.appendChild(chip);
+          if (pos < chain.length - 1) {
+            const arr = document.createElement('span');
+            arr.className = 'arrow-link';
+            arr.textContent = ' → ';
+            cell.appendChild(arr);
+          }
+        });
+        const nil = document.createElement('span');
+        nil.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted);margin-left:4px';
+        nil.textContent = '→ NULL';
+        cell.appendChild(nil);
+      }
+    } else {
+      const val = openTable[i];
+      if (val === null) {
+        cell.classList.add('empty');
+        cell.textContent = 'EMPTY';
+      } else if (val === -1) {
+        cell.classList.add('deleted');
+        cell.textContent = 'DELETED';
+      } else {
+        const chip = document.createElement('span');
+        chip.className = 'key-chip' + (hl.chips&&hl.chips[0] ? ' '+hl.chips[0] : '');
+        chip.textContent = val;
+        cell.appendChild(chip);
+        if (hl.probe !== undefined) {
+          const pb = document.createElement('span');
+          pb.className = 'probe-badge';
+          pb.textContent = `probe ${hl.probe}`;
+          cell.appendChild(pb);
+        }
+      }
+    }
+    row.appendChild(cell);
+    wrap.appendChild(row);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STEP ENGINE
+// ═══════════════════════════════════════════════════════════════
+function recordStep(fn, lineId, explain, highlights, chainSnap, openSnap) {
+  steps.push({
+    fn, lineId, explain,
+    highlights: JSON.parse(JSON.stringify(highlights)),
+    chainSnap: JSON.parse(JSON.stringify(chainSnap || chainTable)),
+    openSnap:  JSON.parse(JSON.stringify(openSnap  || openTable)),
+  });
+}
+
+function applyStep(idx) {
+  if (idx < 0 || idx >= steps.length) return;
+  const s = steps[idx];
+  chainTable = JSON.parse(JSON.stringify(s.chainSnap));
+  openTable  = JSON.parse(JSON.stringify(s.openSnap));
+  document.getElementById('explain-text').innerHTML = s.explain;
+  document.getElementById('step-curr').textContent  = idx+1;
+  document.getElementById('step-total').textContent = steps.length;
+  if (s.fn !== activeFn) { activeFn = s.fn; highlightFnTab(s.fn); }
+  renderCode(s.fn, s.lineId);
+  const el = document.getElementById('cl-'+s.lineId);
+  if (el) el.scrollIntoView({block:'nearest',behavior:'smooth'});
+  renderViz(s.highlights);
+}
+
+function stepDir(dir) {
+  const next = stepIdx + dir;
+  if (next < 0 || next >= steps.length) return;
+  stepIdx = next;
+  applyStep(stepIdx);
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  document.getElementById('btn-prev').disabled = stepIdx <= 0;
+  document.getElementById('btn-next').disabled = stepIdx >= steps.length-1 || steps.length===0;
+  document.getElementById('btn-auto').disabled = steps.length === 0;
+  document.getElementById('btn-auto').textContent = autoTimer ? '⏸ Pause' : '▶ Auto';
+}
+
+function toggleAuto() {
+  if (autoTimer) { stopAuto(); return; }
+  if (stepIdx >= steps.length-1) stepIdx = -1;
+  autoTimer = setInterval(() => {
+    if (stepIdx >= steps.length-1) { stopAuto(); return; }
+    stepDir(1);
+  }, autoDelay);
+  updateNavButtons();
+}
+function stopAuto() { clearInterval(autoTimer); autoTimer = null; updateNavButtons(); }
+function updateSpeed(v) { autoDelay = Math.round(1600 - v*260); }
+
+// ═══════════════════════════════════════════════════════════════
+//  INSERT GENERATORS
+// ═══════════════════════════════════════════════════════════════
+function genInsert(key) {
+  steps = []; stepIdx = -1;
+  const tab = currentTab;
+  const h0 = hashKey(key, tableSize);
+  const fnInsert = FN_TABS_MAP[tab].insert[0];
+  const fnHash   = HASH_CODE_KEY[hashFn];
+
+  if (tab === 'chaining') {
+    // Step 1: compute hash
+    recordStep(fnHash, 'hm2',
+      `Compute hash: <code>h(${key}, ${tableSize}) = ${key} % ${tableSize} = ${h0}</code>. Will insert into bucket <code>[${h0}]</code>.`,
+      {[h0]:{row:'active'}});
+
+    // Step 2: check existing chain
+    const existing = chainTable[h0].length;
+    if (existing > 0) {
+      totalCollisions++;
+      recordStep(fnInsert, 'ci4',
+        `<b>Collision!</b> Bucket <code>[${h0}]</code> already has ${existing} key(s). We prepend to the linked list.`,
+        {[h0]:{row:'collision', chips: Object.fromEntries(chainTable[h0].map((_,i)=>[i,'chip-collision']))}});
+    }
+
+    // Step 3: prepend
+    const prevChain = JSON.parse(JSON.stringify(chainTable));
+    chainTable[h0] = [key, ...chainTable[h0]];
+    totalInserted++;
+    recordStep(fnInsert, 'ci6',
+      `Inserted key <code>${key}</code> at head of chain <code>[${h0}]</code>.`,
+      {[h0]:{row:'inserted', chips:{0:'chip-new'}}});
+
+  } else {
+    // Open addressing strategies
+    const h2 = (tab==='double') ? hashKey2(key, tableSize) : 1;
+
+    // Step 1: compute hash
+    let hashExplain = `Compute: <code>h(${key}, ${tableSize}) = ${h0}</code>`;
+    if (tab==='double') hashExplain += `. Step size: <code>h2(${key}) = 1 + (${key} % ${tableSize-1}) = ${h2}</code>`;
+    recordStep(fnHash, 'hm2', hashExplain, {[h0]:{row:'active'}});
+
+    let inserted = false;
+    for (let i = 0; i < tableSize; i++) {
+      let probe;
+      let probeLine, probeExplain;
+      if (tab==='linear') {
+        probe = (h0 + i) % tableSize;
+        probeLine = 'li5';
+        probeExplain = `probe = (${h0} + ${i}) % ${tableSize} = <code>${probe}</code>`;
+      } else if (tab==='quadratic') {
+        probe = (h0 + i*i) % tableSize;
+        probeLine = 'qi5';
+        probeExplain = `probe = (${h0} + ${i}²) % ${tableSize} = (${h0}+${i*i}) % ${tableSize} = <code>${probe}</code>`;
+      } else {
+        probe = (h0 + i*h2) % tableSize;
+        probeLine = 'di7';
+        probeExplain = `probe = (${h0} + ${i}×${h2}) % ${tableSize} = <code>${probe}</code>`;
+      }
+
+      if (openTable[probe] === null) {
+        // empty slot — insert here
+        const snap = JSON.parse(JSON.stringify(openTable));
+        openTable[probe] = key;
+        totalInserted++;
+        recordStep(fnInsert, probeLine,
+          `${probeExplain}. Slot is <b>EMPTY</b> — insert <code>${key}</code> here! (${i} collision${i===1?'':'s'})`,
+          {[probe]:{row:'inserted', chips:{0:'chip-new'}, probe:i}},
+          null, openTable);
+        inserted = true;
+        break;
+      } else {
+        if (i > 0) totalCollisions++;
+        else totalCollisions++;
+        recordStep(fnInsert, probeLine,
+          `${probeExplain}. Slot has <code>${openTable[probe]}</code> — <b>collision!</b> Probe ${i+1}…`,
+          {[probe]:{row:'collision', chips:{0:'chip-collision'}, probe:i}});
+      }
+    }
+    if (!inserted) {
+      showToast('Table is full!');
+    }
+  }
+
+  stepIdx = 0;
+  applyStep(0);
+  updateNavButtons();
+  addHistory(key, h0);
+  updateStats();
+}
+
+function genSearch(key) {
+  steps = []; stepIdx = -1;
+  const tab = currentTab;
+  const h0 = hashKey(key, tableSize);
+  const fnSearch = FN_TABS_MAP[tab].search[0];
+
+  if (tab === 'chaining') {
+    recordStep(fnSearch, 'cs2',
+      `Compute hash: <code>h(${key}, ${tableSize}) = ${h0}</code>. Look in bucket <code>[${h0}]</code>.`,
+      {[h0]:{row:'active'}});
+    const chain = chainTable[h0];
+    let found = false;
+    chain.forEach((k, pos) => {
+      if (k === key) {
+        found = true;
+        recordStep(fnSearch, 'cs5',
+          `<b>Found!</b> <code>${key}</code> is at position ${pos} in chain <code>[${h0}]</code>.`,
+          {[h0]:{row:'found', chips:{[pos]:'chip-found'}}});
+      } else {
+        recordStep(fnSearch, 'cs6',
+          `curr->data = <code>${k}</code> ≠ <code>${key}</code>. Move to next node.`,
+          {[h0]:{row:'active', chips:{[pos]:'chip-active'}}});
+      }
+    });
+    if (!found) {
+      recordStep(fnSearch, 'cs8',
+        `Reached <code>NULL</code>. Key <code>${key}</code> not found in bucket <code>[${h0}]</code>.`,
+        {[h0]:{row:'active'}});
+    }
+  } else {
+    const h2 = (tab==='double') ? hashKey2(key, tableSize) : 1;
+    recordStep(fnSearch, tab==='linear'?'ls2':tab==='quadratic'?'qs2':'ds2',
+      `Compute: <code>h(${key}, ${tableSize}) = ${h0}</code>${tab==='double'?`, h2=${h2}`:''}. Start probing.`,
+      {[h0]:{row:'active'}});
+
+    let found = false;
+    for (let i = 0; i < tableSize; i++) {
+      let probe;
+      let probeLine;
+      if (tab==='linear')    { probe=(h0+i)%tableSize;    probeLine='ls5'; }
+      else if (tab==='quadratic') { probe=(h0+i*i)%tableSize; probeLine='qs5'; }
+      else                   { probe=(h0+i*h2)%tableSize;  probeLine='ds6'; }
+
+      if (openTable[probe] === null) {
+        recordStep(fnSearch, probeLine,
+          `Slot <code>[${probe}]</code> is EMPTY — key <code>${key}</code> is <b>not in table</b>.`,
+          {[probe]:{row:'active'}});
+        break;
+      } else if (openTable[probe] === key) {
+        found = true;
+        recordStep(fnSearch, probeLine,
+          `<b>Found!</b> Key <code>${key}</code> at slot <code>[${probe}]</code> after ${i+1} probe(s).`,
+          {[probe]:{row:'found', chips:{0:'chip-found'}, probe:i}});
+        break;
+      } else {
+        recordStep(fnSearch, probeLine,
+          `Slot <code>[${probe}]</code> has <code>${openTable[probe]}</code> ≠ <code>${key}</code>. Continue probing…`,
+          {[probe]:{row:'collision', chips:{0:'chip-active'}, probe:i}});
+      }
+    }
+    if (!found && steps.length === 1) {
+      showToast('Key not found');
+    }
+  }
+
+  document.getElementById('stat-probes').textContent = steps.length;
+  stepIdx = 0; applyStep(0); updateNavButtons();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  USER ACTIONS
+// ═══════════════════════════════════════════════════════════════
+function doInsert() {
+  const raw = document.getElementById('key-input').value.trim();
+  if (!raw) { showToast('Enter a key first'); return; }
+  const key = parseInt(raw);
+  if (isNaN(key)) { showToast('Enter a valid integer'); return; }
+  genInsert(key);
+  document.getElementById('key-input').value = '';
+}
+
+function doSearch() {
+  const raw = document.getElementById('key-input').value.trim();
+  if (!raw) { showToast('Enter a key to search'); return; }
+  const key = parseInt(raw);
+  if (isNaN(key)) { showToast('Enter a valid integer'); return; }
+  genSearch(key);
+}
+
+function doReset() {
+  stopAuto();
+  initTables();
+  steps = []; stepIdx = -1;
+  renderViz();
+  renderCode(activeFn, null);
+  document.getElementById('explain-text').innerHTML = 'Table reset. Enter a key or load a preset.';
+  updateNavButtons();
+}
+
+function onSettingChange() {
+  doReset();
+}
+
+const PRESETS = {
+  small:   [5, 22, 8, 17],
+  collide: [11, 22, 33, 44, 5, 16],   // many will hash to same slot with mod 11
+  dense:   [3, 7, 14, 21, 28, 9, 2, 16, 23, 30],
+};
+
+async function loadPreset(name) {
+  doReset();
+  const keys = PRESETS[name];
+  for (const k of keys) {
+    genInsert(k);
+    // fast-forward to end state
+    stepIdx = steps.length - 1;
+    applyStep(stepIdx);
+  }
+  steps = []; stepIdx = -1;
+  renderViz();
+  document.getElementById('explain-text').innerHTML = `Loaded <b>${name}</b> preset (${keys.join(', ')}). Now insert or search!`;
+  updateNavButtons();
+  updateStats();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STATS + HISTORY
+// ═══════════════════════════════════════════════════════════════
+function updateStats() {
+  const m = tableSize;
+  document.getElementById('stat-m').textContent  = m;
+  document.getElementById('stat-n').textContent  = totalInserted;
+  document.getElementById('stat-lf').textContent = (totalInserted/m).toFixed(2);
+  document.getElementById('stat-col').textContent= totalCollisions;
+}
+
+function addHistory(key, idx) {
+  const box = document.getElementById('history-box');
+  const d = document.createElement('div');
+  d.className = 'hist-item hi-ok';
+  d.textContent = `insert(${key}) → [${idx}]`;
+  box.prepend(d);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════════
+function toggleTheme() {
+  isDayMode = !isDayMode;
+  document.body.classList.toggle('day-mode', isDayMode);
+  document.getElementById('theme-icon').textContent  = isDayMode?'🌙':'☀️';
+  document.getElementById('theme-label').textContent = isDayMode?'Night Mode':'Day Mode';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RESIZE HANDLES
+// ═══════════════════════════════════════════════════════════════
+function makeResizable(handleId, getA, getB, minA, minB) {
+  const handle = document.getElementById(handleId);
+  if (!handle) return;
+  let dragging=false, startX, startWA, startWB;
+  const start=cx=>{dragging=true;startX=cx;startWA=getA().getBoundingClientRect().width;startWB=getB().getBoundingClientRect().width;handle.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';};
+  const move=cx=>{if(!dragging)return;let dx=cx-startX,wA=startWA+dx,wB=startWB-dx;if(wA<minA){wA=minA;wB=startWA+startWB-minA;}if(wB<minB){wB=minB;wA=startWA+startWB-minB;}getA().style.width=wA+'px';getA().style.flexShrink='0';};
+  const end=()=>{if(!dragging)return;dragging=false;handle.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';};
+  handle.addEventListener('mousedown',e=>{start(e.clientX);e.preventDefault();});
+  document.addEventListener('mousemove',e=>move(e.clientX));
+  document.addEventListener('mouseup',end);
+  handle.addEventListener('touchstart',e=>{start(e.touches[0].clientX);e.preventDefault();},{passive:false});
+  document.addEventListener('touchmove',e=>{if(dragging)move(e.touches[0].clientX);},{passive:false});
+  document.addEventListener('touchend',end);
+}
+makeResizable('resize-left',  ()=>document.getElementById('code-panel'), ()=>document.getElementById('viz-panel'),  180, 200);
+makeResizable('resize-right', ()=>document.getElementById('viz-panel'),  ()=>document.querySelector('.info-panel'), 200, 140);
+
+// ═══════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft')  stepDir(-1);
+  if (e.key === 'ArrowRight') stepDir(1);
+  if (e.key === ' ') { e.preventDefault(); toggleAuto(); }
+});
+document.getElementById('key-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doInsert();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+switchTab('chaining');
+</script>
+</body>
+</html>

@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Heap — Step-by-Step Visualizer</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --warn: #e3b341;
+  --danger: #f85149;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --highlight-line: rgba(88,166,255,0.12);
+  --highlight-border: #58a6ff;
+}
+body.day-mode {
+  --bg: #f6f8fa; --surface: #ffffff; --surface2: #eef1f4;
+  --border: #d0d7de; --accent: #0969da; --accent2: #1a7f37;
+  --warn: #9a6700; --danger: #cf222e; --text: #1f2328; --muted: #656d76;
+  --highlight-line: rgba(9,105,218,0.18); --highlight-border: #0969da;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ── TOP BAR ── */
+header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 18px; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+}
+.logo { font-size: 1rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; white-space: nowrap; }
+.logo span { color: var(--accent2); }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+input[type=text] {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; width: 90px;
+}
+input:focus { outline: none; border-color: var(--accent); }
+.btn {
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 12px;
+  padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface2); color: var(--text);
+  transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #0d1117; }
+.btn.primary:hover { background: #79b8ff; }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: rgba(248,81,73,0.1); }
+.btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.theme-toggle { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.theme-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 12px;
+  padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface2); color: var(--text); transition: all 0.2s; white-space: nowrap;
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.theme-icon { font-size: 14px; transition: transform 0.4s; }
+.theme-btn:hover .theme-icon { transform: rotate(20deg); }
+
+/* ── MAIN TABS ── */
+.tab-bar {
+  display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab-btn {
+  font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 10px 22px; cursor: pointer; color: var(--muted);
+  border-bottom: 3px solid transparent; border: none; background: none;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
+
+/* ── MAIN LAYOUT ── */
+.main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+/* ── LEFT: CODE PANEL ── */
+.code-panel {
+  width: 400px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--surface); overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+.panel-header {
+  display: flex; align-items: center; gap: 8px; padding: 9px 16px;
+  border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+}
+.panel-header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.fn-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+}
+.fn-tabs::-webkit-scrollbar { display: none; }
+.fn-tab {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 7px 14px; cursor: pointer; color: var(--muted);
+  border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0;
+}
+.fn-tab:hover { color: var(--text); }
+.fn-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.code-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+.code-scroll::-webkit-scrollbar { width: 4px; }
+.code-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.code-line {
+  display: flex; align-items: flex-start; min-height: 22px; padding: 0 16px;
+  transition: background 0.2s; position: relative;
+}
+.code-line.active {
+  background: var(--highlight-line); border-left: 3px solid var(--highlight-border); padding-left: 13px;
+}
+.ln { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); min-width: 28px; user-select: none; padding-top: 1px; }
+.code-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 22px; white-space: pre; }
+.active .code-text { color: #e6edf3; }
+body.day-mode .active .code-text { color: #0d1117; }
+.kw{color:#ff7b72} .fn{color:#d2a8ff} .num{color:#79c0ff}
+.cm{color:var(--muted);font-style:italic} .str{color:#a5d6ff}
+.op{color:#ff7b72} .type{color:#ffa657} .var{color:#c9d1d9}
+
+.explain-box {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  min-height: 80px; flex-shrink: 0; background: var(--surface);
+}
+.explain-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.explain-text { font-size: 13px; line-height: 1.6; color: var(--text); font-family: 'Outfit', sans-serif; }
+.explain-text code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+.step-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.step-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+.step-info .curr { color: var(--accent); font-weight: 700; }
+.nav-btns { display: flex; gap: 6px; }
+
+/* ── CENTER: VIZ PANEL ── */
+.viz-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.viz-canvas-wrap { flex: 1; overflow: hidden; position: relative; }
+canvas { display: block; width: 100%; height: 100%; }
+
+/* ── RIGHT: ARRAY + INFO ── */
+.info-panel {
+  width: 230px; flex-shrink: 0; background: var(--surface);
+  display: flex; flex-direction: column; overflow: hidden;
+  border-left: 1px solid var(--border);
+}
+.array-strip {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.array-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.arr-cells { display: flex; flex-wrap: wrap; gap: 4px; }
+.arr-cell {
+  display: flex; flex-direction: column; align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arr-val {
+  width: 32px; height: 32px; border-radius: 5px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--text);
+  transition: all 0.25s;
+}
+.arr-val.hi-active  { background:#1f4068; border-color:#58a6ff; color:#e6edf3; box-shadow:0 0 8px #58a6ff55; }
+.arr-val.hi-new     { background:#0a3d13; border-color:#3fb950; color:#e6edf3; box-shadow:0 0 8px #3fb95055; }
+.arr-val.hi-swap    { background:#4a2000; border-color:#e3b341; color:#ffd700; box-shadow:0 0 8px #e3b34155; }
+.arr-val.hi-done    { background:#0a3d28; border-color:#3fb950; color:#e6edf3; }
+body.day-mode .arr-val.hi-active  { background:#dbeafe; border-color:#0969da; color:#0d1117; }
+body.day-mode .arr-val.hi-new     { background:#dcfce7; border-color:#1a7f37; color:#0d1117; }
+body.day-mode .arr-val.hi-swap    { background:#fef3c7; border-color:#9a6700; color:#713f12; }
+body.day-mode .arr-val.hi-done    { background:#d1fae5; border-color:#1a7f37; color:#0d1117; }
+.arr-idx { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+.stats-box { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.stats-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.stat-key { color: var(--muted); }
+.stat-val { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-weight: 700; }
+
+/* legend */
+.legend {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border-top: 1px solid var(--border); margin-top: auto;
+  font-size: 11px; color: var(--muted);
+}
+.legend-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.leg-item { display: flex; align-items: center; gap: 8px; }
+.leg-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid transparent; flex-shrink: 0; }
+
+/* resize handle */
+.resize-handle {
+  width: 5px; flex-shrink: 0; background: var(--border); cursor: col-resize;
+  position: relative; z-index: 10; transition: background 0.15s; user-select: none;
+}
+.resize-handle:hover, .resize-handle.dragging { background: var(--accent); }
+.resize-handle::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%); width: 1px; height: 32px;
+  background: currentColor; opacity: 0.4; border-radius: 1px;
+  box-shadow: -2px 0 0 currentColor, 2px 0 0 currentColor;
+}
+
+/* toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 20px; border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+}
+#toast.show { opacity: 1; }
+
+/* speed slider */
+.speed-wrap { display: flex; align-items: center; gap: 6px; }
+.speed-wrap label { font-size: 11px; color: var(--muted); }
+input[type=range] { width: 70px; accent-color: var(--accent); }
+
+@media (max-width: 900px) { .info-panel { display: none; } .code-panel { width: 320px; } }
+@media (max-width: 650px) {
+  .code-panel { width: 100% !important; border-right: none; border-bottom: 1px solid var(--border); }
+  .main { flex-direction: column; }
+  .viz-panel { min-height: 260px; }
+}
+
+/* ── USE-BUILT-HEAP BUTTON ── */
+.btn.use-built {
+  border-color: var(--warn); color: var(--warn);
+  background: rgba(227,179,65,0.08);
+  position: relative;
+}
+.btn.use-built:hover { background: rgba(227,179,65,0.18); }
+.btn.use-built::before {
+  content: '';
+  position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 6px var(--accent2);
+}
+.built-heap-banner {
+  display: none;
+  align-items: center; gap: 8px;
+  padding: 5px 12px;
+  background: rgba(227,179,65,0.08);
+  border: 1px solid rgba(227,179,65,0.3);
+  border-radius: 6px;
+  font-size: 11px; color: var(--warn);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.built-heap-banner.visible { display: flex; }
+.built-heap-banner .bh-vals {
+  color: var(--text); font-size: 11px;
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── ZOOM TOOLBAR ── */
+.zoom-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; background: var(--surface);
+}
+.zoom-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--muted); margin-left: 2px; min-width: 38px; text-align: center;
+}
+.zoom-hint {
+  font-size: 10px; color: var(--muted); margin-left: auto;
+  font-family: 'Outfit', sans-serif; opacity: 0.7;
+}
+.btn.zoom-btn {
+  padding: 4px 10px; font-size: 15px; font-weight: 700; line-height: 1;
+  border-radius: 5px; min-width: 30px;
+}
+.btn.zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* panning cursor */
+#heap-canvas { cursor: grab; }
+#heap-canvas.panning { cursor: grabbing; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Binary Heap <span>// Visualizer</span></div>
+  <div class="controls" id="header-controls">
+    <input type="text" id="val-input" placeholder="e.g. 3,10,1,7" value="" style="width:185px">
+    <button class="btn primary" id="action-btn" onclick="doAction()">⊕ Insert</button>
+    <button class="btn danger" onclick="resetHeap()">⊘ Reset</button>
+  </div>
+  <div class="controls">
+    <span style="font-size:11px;color:var(--muted)">Examples:</span>
+    <button class="btn" onclick="loadExample()" style="font-size:11px" id="example-btn">Load Sample</button>
+  </div>
+
+  <!-- Built-heap transfer banner -->
+  <div class="built-heap-banner" id="built-banner">
+    <span>⬆ Built heap:</span>
+    <span class="bh-vals" id="built-vals">—</span>
+    <button class="btn use-built" onclick="loadBuiltHeap()" title="Load the heap you just built into this tab">Use this heap</button>
+  </div>
+  <div class="speed-wrap">
+    <label>Speed</label>
+    <input type="range" id="speed-range" min="1" max="5" value="3" oninput="updateSpeed(this.value)">
+  </div>
+  <div class="theme-toggle">
+    <button class="theme-btn" onclick="toggleTheme()">
+      <span class="theme-icon" id="theme-icon">☀️</span>
+      <span id="theme-label">Day Mode</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main tabs -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('build')"    id="tab-build">📦 Build Heap</button>
+  <button class="tab-btn"        onclick="switchTab('insert')"   id="tab-insert">⊕ Insertion</button>
+  <button class="tab-btn"        onclick="switchTab('delete')"   id="tab-delete">⊖ Deletion</button>
+  <button class="tab-btn"        onclick="switchTab('heapsort')" id="tab-heapsort">⇅ Heap Sort</button>
+</div>
+
+<div class="main">
+  <!-- Code panel -->
+  <div class="code-panel">
+    <div class="panel-header"><div class="dot"></div> C SOURCE CODE</div>
+    <div class="fn-tabs" id="fn-tabs"></div>
+    <div class="code-scroll"><div id="code-lines"></div></div>
+    <div class="explain-box">
+      <div class="explain-label">▶ What's happening</div>
+      <div class="explain-text" id="explain-text">Select a tab and load an example or enter values to begin.</div>
+    </div>
+    <div class="step-nav">
+      <div class="step-info">Step <span class="curr" id="step-curr">—</span> / <span id="step-total">—</span></div>
+      <div class="nav-btns">
+        <button class="btn" id="btn-prev" onclick="stepDir(-1)" disabled>← Prev</button>
+        <button class="btn" id="btn-next" onclick="stepDir(1)"  disabled>Next →</button>
+        <button class="btn" id="btn-auto" onclick="toggleAuto()" disabled>▶ Auto</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="resize-left"></div>
+
+  <!-- Viz panel -->
+  <div class="viz-panel">
+    <div class="panel-header"><div class="dot" style="background:var(--accent2)"></div> HEAP STRUCTURE</div>
+    <div class="zoom-bar">
+      <button class="btn zoom-btn" onclick="zoomBy(0.25)" title="Zoom In">+</button>
+      <button class="btn zoom-btn" onclick="zoomBy(-0.25)" title="Zoom Out">−</button>
+      <span  class="zoom-label"  id="zoom-pct">100%</span>
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="resetZoom()" title="Reset zoom and pan">⊡ Reset</button>
+      <span class="zoom-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan</span>
+    </div>
+    <div class="viz-canvas-wrap">
+      <canvas id="heap-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="resize-handle" id="resize-right"></div>
+
+  <!-- Info panel -->
+  <div class="info-panel">
+    <div class="panel-header"><div class="dot" style="background:var(--warn)"></div> ARRAY VIEW</div>
+    <div class="array-strip">
+      <div class="array-label">arr[]</div>
+      <div class="arr-cells" id="arr-cells"></div>
+    </div>
+    <div class="stats-box">
+      <div class="stats-label">Heap Stats</div>
+      <div class="stat-row"><span class="stat-key">Size</span><span class="stat-val" id="stat-size">0</span></div>
+      <div class="stat-row"><span class="stat-key">Root (max)</span><span class="stat-val" id="stat-root">—</span></div>
+      <div class="stat-row"><span class="stat-key">Last parent</span><span class="stat-val" id="stat-lastpar">—</span></div>
+      <div class="stat-row"><span class="stat-key">Height</span><span class="stat-val" id="stat-height">—</span></div>
+      <div class="stat-row"><span class="stat-key">Mode</span><span class="stat-val" id="stat-mode">Max-Heap</span></div>
+    </div>
+    <div class="legend">
+      <div class="legend-title">Legend</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#1f4068;border-color:#58a6ff"></div> Currently visiting</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#0a3d13;border-color:#3fb950"></div> Newly inserted / placed</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#4a2000;border-color:#e3b341"></div> Swap / heapify pivot</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#1a0d2e;border-color:#a371f7"></div> Sorted / extracted</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--surface2);border-color:var(--border)"></div> Normal</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  GLOBALS
+// ═══════════════════════════════════════════════════════════════
+let heap     = [];          // live working array
+// ── zoom / pan state ──────────────────────────────────────────
+let zoomScale  = 1.0;    // 0.25 – 3.0
+let panX       = 0;      // canvas-space offset (pixels at scale=1)
+let panY       = 0;
+let isPanning  = false;
+let panStartX  = 0;
+let panStartY  = 0;
+
+let lastBuiltHeap = [];      // saved from Build Heap tab
+let steps    = [];
+let stepIdx  = -1;
+let autoTimer = null;
+let autoDelay = 700;
+let isDayMode  = false;
+let currentTab = 'build';
+
+// node visual states per index: 'normal'|'active'|'new'|'swap'|'done'|'sorted'
+let nodeStates = [];
+
+// ═══════════════════════════════════════════════════════════════
+//  C CODE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const C_CODE = {
+
+  buildHeap: [
+    { text:`<span class="cm">// Build Max-Heap from unsorted array</span>`, id:'bh0' },
+    { text:`<span class="kw">void</span> <span class="fn">buildHeap</span>(<span class="type">int</span> arr[], <span class="type">int</span> n) {`, id:'bh1' },
+    { text:`    <span class="type">int</span> start = n/<span class="num">2</span> - <span class="num">1</span>; <span class="cm">// last non-leaf</span>`, id:'bh2' },
+    { text:`    <span class="kw">for</span> (<span class="type">int</span> i = start; i >= <span class="num">0</span>; i--)`, id:'bh3' },
+    { text:`        <span class="fn">heapifyDown</span>(arr, n, i);`, id:'bh4' },
+    { text:`}`, id:'bh5' },
+  ],
+
+  heapifyDown: [
+    { text:`<span class="kw">void</span> <span class="fn">heapifyDown</span>(<span class="type">int</span> arr[], <span class="type">int</span> n, <span class="type">int</span> i) {`, id:'hd0' },
+    { text:`    <span class="type">int</span> largest = i;          <span class="cm">// assume root is largest</span>`, id:'hd1' },
+    { text:`    <span class="type">int</span> L = <span class="num">2</span>*i + <span class="num">1</span>;         <span class="cm">// left child index</span>`, id:'hd2' },
+    { text:`    <span class="type">int</span> R = <span class="num">2</span>*i + <span class="num">2</span>;         <span class="cm">// right child index</span>`, id:'hd3' },
+    { text:``, id:'hd4' },
+    { text:`    <span class="kw">if</span> (L < n && arr[L] > arr[largest])`, id:'hd5' },
+    { text:`        largest = L;`, id:'hd6' },
+    { text:`    <span class="kw">if</span> (R < n && arr[R] > arr[largest])`, id:'hd7' },
+    { text:`        largest = R;`, id:'hd8' },
+    { text:``, id:'hd9' },
+    { text:`    <span class="kw">if</span> (largest != i) {          <span class="cm">// need to swap</span>`, id:'hd10' },
+    { text:`        <span class="fn">swap</span>(&arr[i], &arr[largest]);`, id:'hd11' },
+    { text:`        <span class="fn">heapifyDown</span>(arr, n, largest); <span class="cm">// recurse</span>`, id:'hd12' },
+    { text:`    }`, id:'hd13' },
+    { text:`}`, id:'hd14' },
+  ],
+
+  insertFn: [
+    { text:`<span class="cm">// Insert key into max-heap</span>`, id:'ins0' },
+    { text:`<span class="kw">void</span> <span class="fn">insert</span>(<span class="type">int</span> arr[], <span class="type">int</span>* n, <span class="type">int</span> key) {`, id:'ins1' },
+    { text:`    arr[*n] = key;              <span class="cm">// place at end</span>`, id:'ins2' },
+    { text:`    (*n)++;                     <span class="cm">// increase size</span>`, id:'ins3' },
+    { text:`    <span class="type">int</span> i = *n - <span class="num">1</span>;          <span class="cm">// index of new node</span>`, id:'ins4' },
+    { text:``, id:'ins5' },
+    { text:`    <span class="cm">// Heapify-Up</span>`, id:'ins6' },
+    { text:`    <span class="kw">while</span> (i != <span class="num">0</span> &&`, id:'ins7' },
+    { text:`           arr[parent(i)] < arr[i]) {`, id:'ins8' },
+    { text:`        <span class="fn">swap</span>(&arr[parent(i)], &arr[i]);`, id:'ins9' },
+    { text:`        i = parent(i);`, id:'ins10' },
+    { text:`    }`, id:'ins11' },
+    { text:`}`, id:'ins12' },
+    { text:``, id:'ins13' },
+    { text:`<span class="type">int</span> <span class="fn">parent</span>(<span class="type">int</span> i) { <span class="kw">return</span> (i-<span class="num">1</span>)/<span class="num">2</span>; }`, id:'ins14' },
+  ],
+
+  deleteFn: [
+    { text:`<span class="cm">// Extract-Max from heap</span>`, id:'del0' },
+    { text:`<span class="type">int</span> <span class="fn">extractMax</span>(<span class="type">int</span> arr[], <span class="type">int</span>* n) {`, id:'del1' },
+    { text:`    <span class="kw">if</span> (*n <= <span class="num">0</span>) <span class="kw">return</span> -<span class="num">1</span>;  <span class="cm">// empty</span>`, id:'del2' },
+    { text:`    <span class="kw">if</span> (*n == <span class="num">1</span>) { (*n)--; <span class="kw">return</span> arr[<span class="num">0</span>]; }`, id:'del3' },
+    { text:``, id:'del4' },
+    { text:`    <span class="type">int</span> root = arr[<span class="num">0</span>];        <span class="cm">// save max</span>`, id:'del5' },
+    { text:`    arr[<span class="num">0</span>] = arr[*n - <span class="num">1</span>];   <span class="cm">// move last to root</span>`, id:'del6' },
+    { text:`    (*n)--;                     <span class="cm">// shrink heap</span>`, id:'del7' },
+    { text:`    <span class="fn">heapifyDown</span>(arr, *n, <span class="num">0</span>); <span class="cm">// restore property</span>`, id:'del8' },
+    { text:`    <span class="kw">return</span> root;`, id:'del9' },
+    { text:`}`, id:'del10' },
+  ],
+
+  heapSort: [
+    { text:`<span class="kw">void</span> <span class="fn">heapSort</span>(<span class="type">int</span> arr[], <span class="type">int</span> n) {`, id:'hs0' },
+    { text:`    <span class="cm">// Phase 1: Build max-heap — O(n)</span>`, id:'hs1' },
+    { text:`    <span class="kw">for</span> (<span class="type">int</span> i = n/<span class="num">2</span>-<span class="num">1</span>; i >= <span class="num">0</span>; i--)`, id:'hs2' },
+    { text:`        <span class="fn">heapifyDown</span>(arr, n, i);`, id:'hs3' },
+    { text:``, id:'hs4' },
+    { text:`    <span class="cm">// Phase 2: Extract max n-1 times — O(n log n)</span>`, id:'hs5' },
+    { text:`    <span class="kw">for</span> (<span class="type">int</span> i = n-<span class="num">1</span>; i > <span class="num">0</span>; i--) {`, id:'hs6' },
+    { text:`        <span class="fn">swap</span>(&arr[<span class="num">0</span>], &arr[i]); <span class="cm">// max → sorted region</span>`, id:'hs7' },
+    { text:`        <span class="fn">heapifyDown</span>(arr, i, <span class="num">0</span>); <span class="cm">// re-heapify</span>`, id:'hs8' },
+    { text:`    }`, id:'hs9' },
+    { text:`}`, id:'hs10' },
+  ],
+};
+
+const FN_TABS = {
+  build:    [['buildHeap','buildHeap'], ['heapifyDown','heapifyDown']],
+  insert:   [['insertFn','insert()'],   ['heapifyDown','heapifyDown']],
+  delete:   [['deleteFn','extractMax()'], ['heapifyDown','heapifyDown']],
+  heapsort: [['heapSort','heapSort()'], ['heapifyDown','heapifyDown']],
+};
+
+let activeFn = 'buildHeap';
+
+// ═══════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  stopAuto();
+  currentTab = tab;
+  heap = []; steps = []; stepIdx = -1;
+  nodeStates = [];
+  zoomScale=1.0; panX=0; panY=0; updateZoomLabel();
+  ['build','insert','delete','heapsort'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+
+  // Update header controls
+  const ab = document.getElementById('action-btn');
+  const eb = document.getElementById('example-btn');
+  const vi = document.getElementById('val-input');
+  if (tab==='build') {
+    ab.textContent='⊕ Build Heap'; ab.onclick=doBuild;
+    vi.placeholder='e.g. 3,10,1,7'; vi.style.width='185px';
+    eb.textContent='Load: {3,10,1,7,4,8,5}'; eb.onclick=()=>loadExample();
+  } else if (tab==='insert') {
+    ab.textContent='⊕ Insert'; ab.onclick=doInsert;
+    vi.placeholder='enter value'; vi.style.width='110px';
+    eb.textContent='Pre-load heap'; eb.onclick=()=>preloadHeap();
+  } else if (tab==='delete') {
+    ab.textContent='⊖ Extract Max'; ab.onclick=doDelete;
+    vi.placeholder='(no input needed)'; vi.style.width='130px';
+    eb.textContent='Pre-load heap'; eb.onclick=()=>preloadHeap();
+  } else if (tab==='heapsort') {
+    ab.textContent='⇅ Run Sort'; ab.onclick=doHeapSort;
+    vi.placeholder='e.g. 12,11,13,5,6'; vi.style.width='185px';
+    eb.textContent='Load: {12,11,13,5,6,7}'; eb.onclick=()=>loadExample();
+  }
+
+  renderFnTabs(tab);
+  updateBuiltBanner();
+  document.getElementById('explain-text').innerHTML = 'Enter values or click <b>Load Sample</b> to begin.';
+  updateNavButtons();
+  updateStats();
+  renderArray([],[]);
+  redraw();
+}
+
+function renderFnTabs(tab) {
+  const tabs = FN_TABS[tab];
+  const container = document.getElementById('fn-tabs');
+  container.innerHTML = '';
+  tabs.forEach(([fn, label], i) => {
+    const d = document.createElement('div');
+    d.className = 'fn-tab' + (i===0?' active':'');
+    d.textContent = label;
+    d.dataset.fn = fn;
+    d.onclick = () => { showFn(fn); };
+    container.appendChild(d);
+  });
+  activeFn = tabs[0][0];
+  renderCode(activeFn, null);
+}
+
+function showFn(fn) {
+  activeFn = fn;
+  document.querySelectorAll('.fn-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.fn===fn);
+  });
+  renderCode(fn, stepIdx>=0 ? steps[stepIdx].lineId : null);
+}
+
+function renderCode(fn, activeId) {
+  const lines = C_CODE[fn] || [];
+  const container = document.getElementById('code-lines');
+  container.innerHTML = '';
+  lines.forEach((line, i) => {
+    const div = document.createElement('div');
+    div.className = 'code-line' + (line.id===activeId?' active':'');
+    div.id = 'cl-'+line.id;
+    div.innerHTML = `<span class="ln">${String(i+1).padStart(2)}</span><span class="code-text">${line.text}</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STEP ENGINE
+// ═══════════════════════════════════════════════════════════════
+function pushStep(arrSnap, states, fn, lineId, explain) {
+  steps.push({ arrSnap:[...arrSnap], states:[...states], fn, lineId, explain });
+}
+
+function applyStep(idx) {
+  if (idx<0 || idx>=steps.length) return;
+  const s = steps[idx];
+  nodeStates = s.states;
+  document.getElementById('explain-text').innerHTML = s.explain;
+  document.getElementById('step-curr').textContent  = idx+1;
+  document.getElementById('step-total').textContent  = steps.length;
+  // Show the fn tab that this step belongs to
+  if (s.fn !== activeFn) showFn(s.fn);
+  // Highlight line
+  renderCode(s.fn, s.lineId);
+  // Scroll highlighted line into view
+  const el = document.getElementById('cl-'+s.lineId);
+  if (el) el.scrollIntoView({block:'nearest',behavior:'smooth'});
+  // Render array
+  renderArray(s.arrSnap, s.states);
+  updateStats(s.arrSnap, s.heapSize);
+  redraw(s.arrSnap, s.states, s.sortedFrom);
+}
+
+function stepDir(dir) {
+  const next = stepIdx + dir;
+  if (next<0 || next>=steps.length) return;
+  stepIdx = next;
+  applyStep(stepIdx);
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  document.getElementById('btn-prev').disabled = stepIdx<=0;
+  document.getElementById('btn-next').disabled = stepIdx>=steps.length-1 || steps.length===0;
+  document.getElementById('btn-auto').disabled = steps.length===0;
+  document.getElementById('btn-auto').textContent = autoTimer ? '⏸ Pause' : '▶ Auto';
+}
+
+function toggleAuto() {
+  if (autoTimer) { stopAuto(); return; }
+  if (stepIdx >= steps.length-1) stepIdx = -1;
+  autoTimer = setInterval(() => {
+    if (stepIdx >= steps.length-1) { stopAuto(); return; }
+    stepDir(1);
+  }, autoDelay);
+  updateNavButtons();
+}
+function stopAuto() {
+  clearInterval(autoTimer); autoTimer = null; updateNavButtons();
+}
+function updateSpeed(v) { autoDelay = Math.round(1600 - v*260); }
+
+// ═══════════════════════════════════════════════════════════════
+//  HEAP OPERATIONS  (step generators)
+// ═══════════════════════════════════════════════════════════════
+
+// -- helpers --
+function parentIdx(i) { return Math.floor((i-1)/2); }
+function leftIdx(i)   { return 2*i+1; }
+function rightIdx(i)  { return 2*i+2; }
+function heapHeight(n) { return n<=0?0:Math.floor(Math.log2(n))+1; }
+
+function recordStep(arr, states, fn, lineId, explain, heapSize, sortedFrom) {
+  const s = {
+    arrSnap:[...arr], states:[...states], fn, lineId, explain,
+    heapSize: heapSize!==undefined ? heapSize : arr.length,
+    sortedFrom: sortedFrom!==undefined ? sortedFrom : arr.length
+  };
+  steps.push(s);
+}
+
+// heapifyDown generator (modifies arr in place, records steps)
+function genHeapifyDown(arr, n, i, fn, heapSize, sortedFrom, label) {
+  const states = new Array(arr.length).fill('normal');
+  states[i] = 'active';
+
+  recordStep(arr, states, fn, 'hd0',
+    `<code>heapifyDown(arr, n=${n}, i=${i})</code>: ${label||''} Check node at index <code>${i}</code> (value <code>${arr[i]}</code>).`,
+    heapSize, sortedFrom);
+
+  let largest = i;
+  const L = leftIdx(i), R = rightIdx(i);
+
+  const s2 = new Array(arr.length).fill('normal');
+  s2[i]='active'; if(L<n)s2[L]='new'; if(R<n)s2[R]='new';
+  recordStep(arr, s2, fn, 'hd2',
+    `Left child index = <code>${L}</code>${L<n?` (val ${arr[L]})`:'(out of range)'}, Right = <code>${R}</code>${R<n?` (val ${arr[R]})`:'(out of range)'}.`,
+    heapSize, sortedFrom);
+
+  if (L<n && arr[L] > arr[largest]) { largest=L; }
+  if (R<n && arr[R] > arr[largest]) { largest=R; }
+
+  const s3 = new Array(arr.length).fill('normal');
+  s3[i]='active'; s3[largest]='swap';
+  recordStep(arr, s3, fn, 'hd5',
+    `Largest so far: index <code>${largest}</code> (value <code>${arr[largest]}</code>). ${largest===i?'Already largest — <b>no swap needed</b>.':'Child is larger — will swap.'}`,
+    heapSize, sortedFrom);
+
+  if (largest !== i) {
+    const s4 = new Array(arr.length).fill('normal');
+    s4[i]='swap'; s4[largest]='swap';
+    recordStep(arr, s4, fn, 'hd11',
+      `Swap <code>arr[${i}]=${arr[i]}</code> ↔ <code>arr[${largest}]=${arr[largest]}</code>.`,
+      heapSize, sortedFrom);
+    [arr[i], arr[largest]] = [arr[largest], arr[i]];
+    const s5 = new Array(arr.length).fill('normal');
+    s5[i]='new'; s5[largest]='new';
+    recordStep(arr, s5, fn, 'hd11',
+      `Swapped ✓ &nbsp; arr[${i}]=${arr[i]}, arr[${largest}]=${arr[largest]}. Recurse on index <code>${largest}</code>.`,
+      heapSize, sortedFrom);
+    genHeapifyDown(arr, n, largest, fn, heapSize, sortedFrom);
+  } else {
+    const s4 = new Array(arr.length).fill('normal');
+    s4[i]='new';
+    recordStep(arr, s4, fn, 'hd13',
+      `Node <code>${arr[i]}</code> at index <code>${i}</code> is already the largest in its subtree — heap property satisfied here ✓`,
+      heapSize, sortedFrom);
+  }
+}
+
+// -- BUILD HEAP --
+function doBuild() {
+  stopAuto();
+  const raw = document.getElementById('val-input').value.trim();
+  let vals = raw.split(/[\s,]+/).map(Number).filter(v=>!isNaN(v)&&v>0);
+  if (!vals.length) { showToast('Enter comma-separated values'); return; }
+  if (vals.length > 15) { vals=vals.slice(0,15); showToast('Capped at 15 values'); }
+  heap = [...vals];
+  steps = []; stepIdx = -1;
+  const arr = [...vals];
+  const n = arr.length;
+
+  // initial
+  const s0 = new Array(n).fill('normal');
+  recordStep(arr, s0, 'buildHeap', 'bh1',
+    `Starting Build-Heap on array [${arr.join(', ')}] with n=${n}. A complete binary tree is formed.`, n, n);
+
+  const startIdx = Math.floor(n/2)-1;
+  const s1 = new Array(n).fill('normal');
+  s1[startIdx]='active';
+  recordStep(arr, s1, 'buildHeap', 'bh2',
+    `Last non-leaf index = <code>n/2 − 1 = ${startIdx}</code>. We will call heapifyDown for indices <code>${startIdx}</code> down to <code>0</code>.`, n, n);
+
+  for (let i=startIdx; i>=0; i--) {
+    const sc = new Array(arr.length).fill('normal');
+    sc[i]='active';
+    recordStep(arr, sc, 'buildHeap', 'bh3',
+      `Loop: <code>i = ${i}</code>. Call <code>heapifyDown(arr, ${n}, ${i})</code>.`, n, n);
+    genHeapifyDown(arr, n, i, 'heapifyDown', n, n, `(Build-Heap pass i=${i})`);
+  }
+
+  const sf = new Array(arr.length).fill('new');
+  recordStep(arr, sf, 'buildHeap', 'bh5',
+    `✅ Build-Heap complete! Max-heap: [${arr.join(', ')}]. Root = <code>${arr[0]}</code> (maximum). Time: <b>O(n)</b>.`, n, n);
+
+  heap = arr;
+  lastBuiltHeap = [...arr];   // save for other tabs
+  updateBuiltBanner();
+  stepIdx = 0;
+  applyStep(0);
+  updateNavButtons();
+}
+
+// -- INSERT --
+function preloadHeap() {
+  heap = [90, 80, 70, 40, 60, 50];
+  steps = []; stepIdx = -1;
+  nodeStates = new Array(heap.length).fill('normal');
+  renderArray(heap, nodeStates);
+  updateStats(heap);
+  redraw(heap, nodeStates);
+  showToast('Heap pre-loaded: [90,80,70,40,60,50]');
+  document.getElementById('explain-text').innerHTML = 'Heap pre-loaded. Enter a value and click <b>Insert</b>.';
+}
+
+function doInsert() {
+  stopAuto();
+  const raw = document.getElementById('val-input').value.trim();
+  if (raw.includes(',')) { showToast('Insertion takes one value at a time — no commas'); return; }
+  const v = parseInt(raw);
+  if (isNaN(v)||v<=0) { showToast('Enter a valid positive integer'); return; }
+  if (heap.length >= 15) { showToast('Heap full (max 15 for display)'); return; }
+  steps = []; stepIdx = -1;
+  const arr = [...heap];
+  const n0 = arr.length;
+
+  // Step 1: place at end
+  arr.push(v);
+  const s1 = new Array(arr.length).fill('normal');
+  s1[n0] = 'new';
+  recordStep(arr, s1, 'insertFn', 'ins2',
+    `<code>arr[${n0}] = ${v}</code>: new key placed at end of array (last position in complete binary tree).`, arr.length, arr.length);
+
+  const s2 = [...s1];
+  recordStep(arr, s2, 'insertFn', 'ins3',
+    `<code>*n = ${arr.length}</code>: heap size incremented. Index of new node: <code>i = ${n0}</code>.`, arr.length, arr.length);
+
+  // Heapify-Up
+  let i = n0;
+  let swapped = false;
+  while (i !== 0) {
+    const p = parentIdx(i);
+    const sc = new Array(arr.length).fill('normal');
+    sc[i]='active'; sc[p]='new';
+    recordStep(arr, sc, 'insertFn', 'ins7',
+      `Check: <code>arr[parent(${i})] = arr[${p}] = ${arr[p]}</code> vs <code>arr[${i}] = ${arr[i]}</code>. ${arr[p]<arr[i]?'Parent < child → <b>swap</b>.':'Parent ≥ child → <b>stop</b>, heap property satisfied.'}`,
+      arr.length, arr.length);
+
+    if (arr[p] < arr[i]) {
+      const ss = new Array(arr.length).fill('normal');
+      ss[i]='swap'; ss[p]='swap';
+      recordStep(arr, ss, 'insertFn', 'ins9',
+        `<code>swap(arr[${p}]=${arr[p]}, arr[${i}]=${arr[i]})</code>. Moving <code>${arr[i]}</code> up.`, arr.length, arr.length);
+      [arr[i], arr[p]] = [arr[p], arr[i]];
+      swapped = true;
+      const sa = new Array(arr.length).fill('normal');
+      sa[p]='new'; sa[i]='active';
+      recordStep(arr, sa, 'insertFn', 'ins10',
+        `After swap: arr[${p}]=${arr[p]}, arr[${i}]=${arr[i]}. Continue up: <code>i = parent(${i}) = ${p}</code>.`, arr.length, arr.length);
+      i = p;
+    } else {
+      break;
+    }
+  }
+
+  const sf = new Array(arr.length).fill('normal');
+  sf[i]='new';
+  recordStep(arr, sf, 'insertFn', 'ins12',
+    `✅ <code>${v}</code> inserted successfully${swapped?` — bubbled up to index <code>${i}</code>`:'— already in correct position'}. Heap property restored. Time: <b>O(log n)</b>.`,
+    arr.length, arr.length);
+
+  heap = arr;
+  stepIdx = 0; applyStep(0); updateNavButtons();
+}
+
+// -- DELETE (Extract Max) --
+function doDelete() {
+  stopAuto();
+  if (heap.length===0) { showToast('Heap is empty!'); return; }
+  steps = []; stepIdx = -1;
+  const arr = [...heap];
+  const n = arr.length;
+  const maxVal = arr[0];
+
+  const s0 = new Array(n).fill('normal');
+  s0[0]='active';
+  recordStep(arr, s0, 'deleteFn', 'del1',
+    `<code>extractMax()</code>: root <code>arr[0] = ${maxVal}</code> is the maximum. We will remove it.`, n, n);
+
+  const s1 = new Array(n).fill('normal');
+  s1[0]='active';
+  recordStep(arr, s1, 'deleteFn', 'del5',
+    `Save <code>root = arr[0] = ${maxVal}</code>. We will return this value at the end.`, n, n);
+
+  // Move last to root
+  const s2 = new Array(n).fill('normal');
+  s2[0]='swap'; s2[n-1]='swap';
+  recordStep(arr, s2, 'deleteFn', 'del6',
+    `Move last element <code>arr[${n-1}]=${arr[n-1]}</code> to root position <code>arr[0]</code>.`, n, n);
+
+  arr[0] = arr[n-1];
+  arr.pop();
+  const newN = arr.length;
+  const s3 = new Array(newN).fill('normal');
+  s3[0]='new';
+  recordStep(arr, s3, 'deleteFn', 'del7',
+    `<code>arr[0] = ${arr[0]}</code> (last element moved up). Heap size decremented to <code>${newN}</code>. Last slot freed.`, newN, newN);
+
+  recordStep(arr, new Array(newN).fill('normal'), 'deleteFn', 'del8',
+    `Call <code>heapifyDown(arr, ${newN}, 0)</code> to restore max-heap property from the root.`, newN, newN);
+
+  genHeapifyDown(arr, newN, 0, 'heapifyDown', newN, newN, '(after extraction)');
+
+  const sf = new Array(arr.length).fill('new');
+  recordStep(arr, sf, 'deleteFn', 'del9',
+    `✅ Extract-Max complete. Removed <code>${maxVal}</code>. Remaining heap: [${arr.join(', ')}]. Time: <b>O(log n)</b>.`, arr.length, arr.length);
+
+  heap = arr;
+  stepIdx=0; applyStep(0); updateNavButtons();
+}
+
+// -- HEAP SORT --
+function doHeapSort() {
+  stopAuto();
+  const raw = document.getElementById('val-input').value.trim();
+  let vals = raw.split(/[\s,]+/).map(Number).filter(v=>!isNaN(v)&&v>0);
+  if (!vals.length) { showToast('Enter comma-separated values'); return; }
+  if (vals.length > 12) { vals=vals.slice(0,12); showToast('Capped at 12 for display'); }
+  heap = [...vals];
+  steps = []; stepIdx = -1;
+  const arr = [...vals];
+  const n = arr.length;
+
+  // Phase 1: Build heap
+  const p0 = new Array(n).fill('normal');
+  recordStep(arr, p0, 'heapSort', 'hs0',
+    `<code>heapSort(arr, ${n})</code>: Phase 1 — Build Max-Heap from [${arr.join(', ')}].`, n, n);
+
+  const startIdx = Math.floor(n/2)-1;
+  for (let i=startIdx; i>=0; i--) {
+    const sc = new Array(arr.length).fill('normal');
+    sc[i]='active';
+    recordStep(arr, sc, 'heapSort', 'hs2',
+      `Phase 1 loop: <code>i=${i}</code>. Call <code>heapifyDown(arr, ${n}, ${i})</code>.`, n, n);
+    genHeapifyDown(arr, n, i, 'heapifyDown', n, n);
+  }
+
+  const ph1done = new Array(n).fill('new');
+  recordStep(arr, ph1done, 'heapSort', 'hs4',
+    `Phase 1 complete ✓ Max-Heap: [${arr.join(', ')}]. Root = max = <code>${arr[0]}</code>. Now Phase 2: extract n−1 times.`, n, n);
+
+  // Phase 2: extract
+  let sortedFrom = n; // index from which the array is sorted (grows leftward)
+  for (let i=n-1; i>0; i--) {
+    sortedFrom = i;
+    const ss = new Array(arr.length).fill('normal');
+    for(let k=i+1;k<arr.length;k++) ss[k]='done';
+    ss[0]='swap'; ss[i]='swap';
+    recordStep(arr, ss, 'heapSort', 'hs7',
+      `<b>i=${i}</b>: Swap root <code>arr[0]=${arr[0]}</code> (max) with <code>arr[${i}]=${arr[i]}</code>. Place max into sorted region.`,
+      i, i+1);
+
+    [arr[0], arr[i]] = [arr[i], arr[0]];
+    const sa = new Array(arr.length).fill('normal');
+    for(let k=i;k<arr.length;k++) sa[k]='done';
+    sa[0]='new';
+    recordStep(arr, sa, 'heapSort', 'hs7',
+      `<code>${arr[i]}</code> is now in its correct sorted position (index ${i}). Heap shrinks to size <code>${i}</code>. Call heapifyDown.`,
+      i, i);
+
+    recordStep(arr, sa, 'heapSort', 'hs8',
+      `Call <code>heapifyDown(arr, ${i}, 0)</code> to restore max-heap on remaining <code>${i}</code> elements.`, i, i);
+
+    genHeapifyDown(arr, i, 0, 'heapifyDown', i, i);
+  }
+
+  const sf = new Array(arr.length).fill('done');
+  recordStep(arr, sf, 'heapSort', 'hs9',
+    `✅ Heap Sort complete! Sorted array (ascending): [${arr.join(', ')}]. Time: <b>O(n log n)</b>, Space: <b>O(1)</b>.`, 0, 0);
+
+  heap = arr;
+  stepIdx=0; applyStep(0); updateNavButtons();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  BUILT-HEAP TRANSFER
+// ═══════════════════════════════════════════════════════════════
+function updateBuiltBanner() {
+  const banner = document.getElementById('built-banner');
+  const valsEl = document.getElementById('built-vals');
+  if (lastBuiltHeap.length > 0 && currentTab !== 'build') {
+    banner.classList.add('visible');
+    const preview = lastBuiltHeap.join(', ');
+    valsEl.textContent = preview.length > 28 ? preview.slice(0,28)+'…' : preview;
+    valsEl.title = '[' + lastBuiltHeap.join(', ') + ']';
+  } else {
+    banner.classList.remove('visible');
+  }
+}
+
+function loadBuiltHeap() {
+  if (!lastBuiltHeap.length) { showToast('No heap built yet — go to Build Heap tab first'); return; }
+  stopAuto();
+  heap = [...lastBuiltHeap];
+  steps = []; stepIdx = -1;
+  nodeStates = new Array(heap.length).fill('normal');
+  renderArray(heap, nodeStates);
+  updateStats(heap);
+  redraw(heap, nodeStates);
+  const action = { insert:'Insert', delete:'Extract Max', heapsort:'Run Sort' }[currentTab] || '';
+  document.getElementById('explain-text').innerHTML =
+    `Heap loaded from Build Heap tab: <code>[${heap.join(', ')}]</code>.<br>` +
+    (currentTab==='insert' ? 'Enter a value and click <b>Insert</b>.' :
+     currentTab==='delete' ? 'Click <b>Extract Max</b> to begin.' :
+     currentTab==='heapsort' ? 'Click <b>Run Sort</b> to begin heap sort.' : '');
+  showToast(`Built heap loaded: [${heap.join(', ')}]`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOAD EXAMPLES
+// ═══════════════════════════════════════════════════════════════
+function loadExample() {
+  if (currentTab==='build') {
+    document.getElementById('val-input').value='3,10,1,7,4,8,5';
+    doBuild();
+  } else if (currentTab==='heapsort') {
+    document.getElementById('val-input').value='12,11,13,5,6,7';
+    doHeapSort();
+  } else {
+    preloadHeap();
+  }
+}
+
+function resetHeap() {
+  stopAuto();
+  heap=[]; steps=[]; stepIdx=-1; nodeStates=[];
+  zoomScale=1.0; panX=0; panY=0; updateZoomLabel();
+  renderArray([],[]);
+  updateStats([]);
+  redraw([],[]);
+  renderCode(activeFn, null);
+  document.getElementById('explain-text').innerHTML='Enter values or click <b>Load Sample</b> to begin.';
+  document.getElementById('step-curr').textContent='—';
+  document.getElementById('step-total').textContent='—';
+  updateNavButtons();
+  showToast('Reset');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ARRAY STRIP
+// ═══════════════════════════════════════════════════════════════
+function renderArray(arr, states) {
+  const cont = document.getElementById('arr-cells');
+  cont.innerHTML = '';
+  arr.forEach((v,i) => {
+    const cell = document.createElement('div');
+    cell.className='arr-cell';
+    const vd = document.createElement('div');
+    vd.className='arr-val';
+    const st = states[i]||'normal';
+    if (st==='active') vd.classList.add('hi-active');
+    else if (st==='new') vd.classList.add('hi-new');
+    else if (st==='swap') vd.classList.add('hi-swap');
+    else if (st==='done') vd.classList.add('hi-done');
+    vd.textContent=v;
+    const id = document.createElement('div');
+    id.className='arr-idx'; id.textContent='['+i+']';
+    cell.appendChild(vd); cell.appendChild(id);
+    cont.appendChild(cell);
+  });
+}
+
+function updateStats(arr, heapSize) {
+  const a = arr||heap;
+  const sz = heapSize!==undefined ? heapSize : a.length;
+  document.getElementById('stat-size').textContent = sz;
+  document.getElementById('stat-root').textContent = sz>0 ? a[0] : '—';
+  document.getElementById('stat-lastpar').textContent = sz>1 ? Math.floor(sz/2)-1 : '—';
+  document.getElementById('stat-height').textContent = heapHeight(sz) || '—';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CANVAS DRAWING
+// ═══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('heap-canvas');
+const ctx    = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W+'px';
+  canvas.style.height = H+'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  if (stepIdx>=0 && steps.length>0) {
+    const s=steps[stepIdx];
+    redraw(s.arrSnap, s.states, s.sortedFrom, s.heapSize);
+  } else {
+    redraw(heap, nodeStates);
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+
+function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+
+// Adaptive layout: compute node radius and level height so the tree always fits
+function computeLayout(n, W, H) {
+  if (n === 0) return { pos: [], r: 22, levelH: 80 };
+  const depth = Math.floor(Math.log2(n)) + 1;          // number of levels
+  const maxLeaves = Math.pow(2, depth - 1);             // max nodes on last level
+
+  // Target: fit maxLeaves nodes across W with minimum gap
+  // Each leaf needs: 2r (node) + gap on each side
+  const minGap = 4;
+  // r such that maxLeaves*(2r + minGap) <= W - 2*margin
+  const margin = 20;
+  const rFromWidth = Math.floor((W - 2*margin - maxLeaves*minGap) / (2*maxLeaves));
+  const r = Math.max(12, Math.min(24, rFromWidth));     // clamp 12–24px
+
+  // Level height: fit depth levels into H with margin
+  const topMargin = r * 2.8;
+  const bottomMargin = r * 2;
+  const levelH = depth > 1
+    ? Math.max(r*2 + 14, Math.floor((H - topMargin - bottomMargin) / (depth - 1)))
+    : 80;
+
+  // Assign positions via recursive placement
+  const pos = new Array(n);
+  function place(i, x, y, spread) {
+    if (i >= n) return;
+    pos[i] = { x, y };
+    place(2*i+1, x - spread, y + levelH, spread / 2);
+    place(2*i+2, x + spread, y + levelH, spread / 2);
+  }
+  // Root spread: half the distance between first two leaves at max depth
+  const rootSpread = (maxLeaves / 2) * (r * 2 + minGap);
+  place(0, W / 2, topMargin, rootSpread);
+
+  return { pos, r, levelH };
+}
+
+function redraw(arr, states, sortedFrom, heapSz) {
+  const a  = arr    !== undefined ? arr    : heap;
+  const st = states !== undefined ? states : nodeStates;
+  const W  = canvas.clientWidth;
+  const H  = canvas.clientHeight;
+  ctx.clearRect(0,0,W,H);
+
+  if (!a || a.length===0) {
+    ctx.font='15px Outfit,sans-serif';
+    ctx.fillStyle=cssVar('--muted');
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const msg = {
+      build:    'Enter comma-separated values and click Build Heap',
+      insert:   'Pre-load a heap or insert values one by one',
+      delete:   'Pre-load a heap, then click Extract Max',
+      heapsort: 'Enter comma-separated values and click Run Sort',
+    }[currentTab] || 'Load data to begin';
+    ctx.fillText(msg, W/2, H/2);
+    return;
+  }
+
+  const n   = a.length;
+  const hsz = (heapSz  !== undefined) ? heapSz  : n;
+  const sfm = (sortedFrom !== undefined) ? sortedFrom : n;
+
+  // Apply zoom + pan transform
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(zoomScale, zoomScale);
+
+  // Compute layout in the LOGICAL (pre-zoom) canvas space
+  const { pos, r } = computeLayout(n, W, H);
+
+  // ── Draw edges ──
+  ctx.lineWidth = 1.5;
+  for (let i=0; i<n; i++) {
+    const L=2*i+1, R=2*i+2, pi=pos[i];
+    if (!pi) continue;
+    if (L<n && pos[L]) {
+      ctx.strokeStyle = L>=sfm ? '#a371f740' : cssVar('--border');
+      ctx.beginPath(); ctx.moveTo(pi.x,pi.y); ctx.lineTo(pos[L].x,pos[L].y); ctx.stroke();
+    }
+    if (R<n && pos[R]) {
+      ctx.strokeStyle = R>=sfm ? '#a371f740' : cssVar('--border');
+      ctx.beginPath(); ctx.moveTo(pi.x,pi.y); ctx.lineTo(pos[R].x,pos[R].y); ctx.stroke();
+    }
+  }
+
+  // ── Draw nodes ──
+  for (let i=0; i<n; i++) {
+    const pi=pos[i]; if (!pi) continue;
+    const state  = st[i] || 'normal';
+    const inHeap = i < hsz;
+    const sorted = i >= sfm;
+
+    let fill, border, txtColor, shadowCol;
+    if (isDayMode) {
+      txtColor='#1f2328';
+      if      (sorted)           {fill='#ede9fe';border='#7c3aed';txtColor='#4c1d95';shadowCol='#7c3aed';}
+      else if (state==='active') {fill='#dbeafe';border='#0969da';shadowCol='#0969da';}
+      else if (state==='new')    {fill='#dcfce7';border='#1a7f37';shadowCol='#1a7f37';}
+      else if (state==='swap')   {fill='#fef3c7';border='#9a6700';txtColor='#713f12';shadowCol='#9a6700';}
+      else if (state==='done')   {fill='#d1fae5';border='#1a7f37';shadowCol='#1a7f37';}
+      else if (!inHeap&&!sorted) {fill='#eef1f4';border='#d0d7de';txtColor='#aaa';}
+      else                       {fill='#eef1f4';border='#d0d7de';}
+    } else {
+      txtColor='#e6edf3';
+      if      (sorted)           {fill='#1a0d2e';border='#a371f7';txtColor='#c9b1fd';shadowCol='#a371f7';}
+      else if (state==='active') {fill='#1f4068';border='#58a6ff';shadowCol='#58a6ff';}
+      else if (state==='new')    {fill='#0a3d13';border='#3fb950';shadowCol='#3fb950';}
+      else if (state==='swap')   {fill='#4a2000';border='#e3b341';txtColor='#ffd700';shadowCol='#e3b341';}
+      else if (state==='done')   {fill='#0a3d28';border='#3fb950';shadowCol='#3fb950';}
+      else if (!inHeap&&!sorted) {fill='#21262d';border='#30363d';txtColor='#555';}
+      else                       {fill='#21262d';border='#444c56';}
+    }
+
+    ctx.shadowColor=shadowCol||'transparent';
+    ctx.shadowBlur =shadowCol?10:0;
+    ctx.beginPath(); ctx.arc(pi.x,pi.y,r,0,Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill();
+    ctx.strokeStyle=border; ctx.lineWidth=state!=='normal'?2.5:1.5;
+    ctx.stroke(); ctx.shadowBlur=0;
+
+    // Value – scale font with node radius
+    const fv = r<16 ? Math.max(8,r*0.65) : (a[i]>=100?Math.max(9,r*0.52):Math.max(10,r*0.6));
+    ctx.font=`bold ${fv}px JetBrains Mono,monospace`;
+    ctx.fillStyle=txtColor; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(a[i], pi.x, pi.y);
+
+    // Index label (hide when very small)
+    if (r>=13) {
+      ctx.font=`${Math.max(8,r*0.38)}px JetBrains Mono,monospace`;
+      ctx.fillStyle=cssVar('--muted');
+      ctx.fillText('['+i+']', pi.x, pi.y+r+Math.max(8,r*0.45));
+    }
+
+    // root label
+    if (i===0&&!sorted&&r>=15) {
+      ctx.font='9px Outfit,sans-serif'; ctx.fillStyle=cssVar('--accent');
+      ctx.fillText('root (max)', pi.x, pi.y-r-7);
+    }
+
+    // sorted tick
+    if (sorted&&currentTab==='heapsort'&&r>=14) {
+      ctx.font='9px Outfit,sans-serif'; ctx.fillStyle='#a371f7';
+      ctx.fillText('✓', pi.x, pi.y+r+Math.max(16,r*0.85));
+    }
+  }
+
+  // Vertical dashed boundary between heap and sorted regions (heapsort only)
+  if (sfm>0&&sfm<n&&currentTab==='heapsort'&&pos[sfm]) {
+    const bx=pos[sfm].x-r-6;
+    ctx.beginPath(); ctx.setLineDash([5,4]);
+    ctx.strokeStyle='#a371f760'; ctx.lineWidth=1.5;
+    ctx.moveTo(bx,10); ctx.lineTo(bx,H-10); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font='9px Outfit,sans-serif'; ctx.fillStyle='#a371f7';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText('sorted →', bx+4, 12); ctx.textAlign='center';
+  }
+
+  ctx.restore(); // end zoom+pan transform — runs always
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  ZOOM & PAN
+// ═══════════════════════════════════════════════════════════════
+function zoomBy(delta) {
+  zoomScale = Math.min(3.0, Math.max(0.25, Math.round((zoomScale + delta) * 100) / 100));
+  updateZoomLabel();
+  triggerRedraw();
+}
+
+function resetZoom() {
+  zoomScale = 1.0; panX = 0; panY = 0;
+  updateZoomLabel();
+  triggerRedraw();
+}
+
+function updateZoomLabel() {
+  document.getElementById('zoom-pct').textContent = Math.round(zoomScale * 100) + '%';
+}
+
+function triggerRedraw() {
+  if (stepIdx >= 0 && steps.length > 0) {
+    const s = steps[stepIdx];
+    redraw(s.arrSnap, s.states, s.sortedFrom, s.heapSize);
+  } else {
+    redraw(heap, nodeStates);
+  }
+}
+
+// Mouse-wheel zoom centred on cursor
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  // cursor position in canvas logical coords
+  const cx = (e.clientX - rect.left);
+  const cy = (e.clientY - rect.top);
+  const delta = e.deltaY < 0 ? 0.12 : -0.12;
+  const oldScale = zoomScale;
+  zoomScale = Math.min(3.0, Math.max(0.25, Math.round((zoomScale + delta) * 100) / 100));
+  // Adjust pan so zoom centres on cursor
+  const scaleRatio = zoomScale / oldScale;
+  panX = cx - scaleRatio * (cx - panX);
+  panY = cy - scaleRatio * (cy - panY);
+  updateZoomLabel();
+  triggerRedraw();
+}, { passive: false });
+
+// Drag-to-pan
+canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  isPanning = true;
+  panStartX = e.clientX - panX;
+  panStartY = e.clientY - panY;
+  canvas.classList.add('panning');
+});
+document.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  panX = e.clientX - panStartX;
+  panY = e.clientY - panStartY;
+  triggerRedraw();
+});
+document.addEventListener('mouseup', () => {
+  if (!isPanning) return;
+  isPanning = false;
+  canvas.classList.remove('panning');
+});
+
+// Touch pinch-zoom
+let lastTouchDist = null;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist = Math.hypot(dx, dy);
+  } else if (e.touches.length === 1) {
+    isPanning = true;
+    panStartX = e.touches[0].clientX - panX;
+    panStartY = e.touches[0].clientY - panY;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2 && lastTouchDist !== null) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.hypot(dx, dy);
+    const delta = (dist - lastTouchDist) * 0.005;
+    lastTouchDist = dist;
+    zoomScale = Math.min(3.0, Math.max(0.25, Math.round((zoomScale + delta) * 100) / 100));
+    updateZoomLabel(); triggerRedraw();
+  } else if (e.touches.length === 1 && isPanning) {
+    panX = e.touches[0].clientX - panStartX;
+    panY = e.touches[0].clientY - panStartY;
+    triggerRedraw();
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', () => { isPanning = false; lastTouchDist = null; });
+
+// Reset zoom/pan when tab switches or heap resets
+// ═══════════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════════
+function toggleTheme() {
+  isDayMode = !isDayMode;
+  document.body.classList.toggle('day-mode', isDayMode);
+  document.getElementById('theme-icon').textContent  = isDayMode?'🌙':'☀️';
+  document.getElementById('theme-label').textContent = isDayMode?'Night Mode':'Day Mode';
+  if (stepIdx>=0&&steps.length>0) {
+    const s=steps[stepIdx];
+    redraw(s.arrSnap,s.states,s.sortedFrom,s.heapSize);
+  } else redraw(heap,nodeStates);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RESIZE HANDLES
+// ═══════════════════════════════════════════════════════════════
+function makeResizable(handleId, getA, getB, minA, minB) {
+  const handle = document.getElementById(handleId);
+  if (!handle) return;
+  let dragging=false, startX, startWA, startWB;
+  const start=cx=>{dragging=true;startX=cx;startWA=getA().getBoundingClientRect().width;startWB=getB().getBoundingClientRect().width;handle.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';};
+  const move=cx=>{if(!dragging)return;let dx=cx-startX,wA=startWA+dx,wB=startWB-dx;if(wA<minA){wA=minA;wB=startWA+startWB-minA;}if(wB<minB){wB=minB;wA=startWA+startWB-minB;}getA().style.width=wA+'px';getA().style.flexShrink='0';getB().style.width=wB+'px';getB().style.flexShrink='0';resizeCanvas();};
+  const end=()=>{if(!dragging)return;dragging=false;handle.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';resizeCanvas();};
+  handle.addEventListener('mousedown',e=>{start(e.clientX);e.preventDefault();});
+  document.addEventListener('mousemove',e=>move(e.clientX));
+  document.addEventListener('mouseup',end);
+  handle.addEventListener('touchstart',e=>{start(e.touches[0].clientX);e.preventDefault();},{passive:false});
+  document.addEventListener('touchmove',e=>{if(dragging)move(e.touches[0].clientX);},{passive:false});
+  document.addEventListener('touchend',end);
+}
+makeResizable('resize-left', ()=>document.querySelector('.code-panel'), ()=>document.querySelector('.viz-panel'), 180, 200);
+makeResizable('resize-right', ()=>document.querySelector('.viz-panel'), ()=>document.querySelector('.info-panel'), 200, 140);
+
+// ═══════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e=>{
+  if (e.target.tagName==='INPUT') return;
+  if (e.key==='ArrowLeft')  stepDir(-1);
+  if (e.key==='ArrowRight') stepDir(1);
+  if (e.key===' ') { e.preventDefault(); toggleAuto(); }
+});
+document.getElementById('val-input').addEventListener('keydown', e=>{
+  if (e.key==='Enter') doAction();
+});
+function doAction() {
+  const tab = currentTab;
+  if (tab==='build')    doBuild();
+  else if (tab==='insert')   doInsert();
+  else if (tab==='delete')   doDelete();
+  else if (tab==='heapsort') doHeapSort();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+switchTab('build');
+resizeCanvas();
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Binary Search Visualizer</title>
+    <style>
+        :root { --primary: #2563eb; --success: #16a34a; --highlight: #fef08a; --discarded: #e5e7eb; --dark: #1e293b; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; padding: 30px; color: #1e293b; }
+        
+        .setup-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 30px; max-width: 900px; width: 100%; margin-left: auto; margin-right: auto; }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+        
+        .layout { display: flex; gap: 30px; max-width: 1100px; width: 100%; margin: 0 auto; opacity: 0.3; pointer-events: none; transition: 0.5s; }
+        .layout.active { opacity: 1; pointer-events: all; }
+        
+        /* Visualizer */
+        .visual-side { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
+        .array-container { display: flex; gap: 6px; margin: 40px 0; flex-wrap: wrap; justify-content: center; }
+        .cell { width: 50px; height: 50px; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; background: white; font-weight: bold; position: relative; transition: 0.3s; border-radius: 4px; }
+        .cell .idx { position: absolute; bottom: -22px; font-size: 11px; color: #64748b; }
+        
+        /* Code Box */
+        .code-side { flex: 1; background: var(--dark); color: #f8fafc; padding: 20px; border-radius: 8px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 14px; }
+        .code-line { padding: 3px 10px; border-radius: 4px; opacity: 0.4; transition: 0.2s; white-space: pre; }
+        .code-line.active { opacity: 1; background: #334155; border-left: 4px solid var(--primary); }
+
+        /* Algorithm States */
+        .mid-cell { background: var(--highlight); border-color: #ca8a04; transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .found-cell { background: var(--success) !important; color: white; border-color: #14532d; transform: scale(1.1); }
+        .discarded { opacity: 0.2; background: var(--discarded); filter: grayscale(1); }
+        
+        input, button { padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; }
+        button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .status-bar { height: 30px; font-weight: 600; color: var(--primary); margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="setup-container">
+        <h2>1. Configure Array</h2>
+        <div class="input-group">
+            <label>Comma-separated numbers:</label>
+            <input type="text" id="rawInputs" placeholder="e.g. 45, 12, 8, 99, 34" style="flex-grow: 1;">
+            <button onclick="buildArray()">Generate & Sort</button>
+        </div>
+        <div class="input-group">
+            <label>Target Value:</label>
+            <input type="number" id="targetVal" placeholder="Find this...">
+            <button onclick="startSearch()">Start Visualizer</button>
+        </div>
+    </div>
+
+    <div class="layout" id="mainLayout">
+        <div class="visual-side">
+            <div id="arrayWrapper" class="array-container"></div>
+            <div class="status-bar" id="statusMsg">Ready...</div>
+            <div style="margin-top: 20px;">
+                <button id="prevBtn" onclick="prevStep()">← Previous</button>
+                <button id="nextBtn" onclick="nextStep()">Next Step →</button>
+            </div>
+        </div>
+
+        <div class="code-side">
+            <div class="code-line" id="line-1">int low = 0, high = n - 1;</div>
+            <div class="code-line" id="line-2">while (low <= high) {</div>
+            <div class="code-line" id="line-3">  int mid = low + (high - low) / 2;</div>
+            <div class="code-line" id="line-4">  if (arr[mid] == target) return mid;</div>
+            <div class="code-line" id="line-5">  if (arr[mid] < target)</div>
+            <div class="code-line" id="line-6">    low = mid + 1;</div>
+            <div class="code-line" id="line-7">  else</div>
+            <div class="code-line" id="line-8">    high = mid - 1;</div>
+            <div class="code-line" id="line-9">}</div>
+            <div class="code-line" id="line-10">return -1; // Not found</div>
+        </div>
+    </div>
+
+    <script>
+        let userData = [];
+        let steps = [];
+        let currentIdx = -1;
+
+        function buildArray() {
+            const str = document.getElementById('rawInputs').value;
+            if(!str) return alert("Please enter numbers");
+            
+            // Convert to numbers and sort (essential for Binary Search)
+            userData = str.split(',')
+                          .map(n => parseInt(n.trim()))
+                          .filter(n => !isNaN(n))
+                          .sort((a, b) => a - b);
+            
+            renderCells();
+            document.getElementById('statusMsg').innerText = "Array generated and sorted!";
+        }
+
+        function renderCells() {
+            const container = document.getElementById('arrayWrapper');
+            container.innerHTML = userData.map((v, i) => 
+                `<div class="cell" id="cell-${i}"><span class="idx">${i}</span>${v}</div>`
+            ).join('');
+        }
+
+        function startSearch() {
+            if(userData.length === 0) return alert("Generate array first!");
+            const target = parseInt(document.getElementById('targetVal').value);
+            if(isNaN(target)) return alert("Enter target value");
+
+            steps = [];
+            currentIdx = -1;
+            document.getElementById('mainLayout').classList.add('active');
+
+            let low = 0, high = userData.length - 1;
+            
+            steps.push({ l: low, h: high, m: null, line: 1, msg: "Initialize: low=0, high=" + high });
+
+            while (low <= high) {
+                steps.push({ l: low, h: high, m: null, line: 2, msg: `Check: is ${low} <= ${high}?` });
+                
+                let mid = Math.floor(low + (high - low) / 2);
+                steps.push({ l: low, h: high, m: mid, line: 3, msg: `Calculate mid: ${mid}` });
+                
+                steps.push({ l: low, h: high, m: mid, line: 4, msg: `Compare arr[${mid}] (${userData[mid]}) to target` });
+                
+                if (userData[mid] === target) {
+                    steps.push({ l: low, h: high, m: mid, line: 4, msg: "FOUND IT!", found: true });
+                    break;
+                }
+                
+                if (userData[mid] < target) {
+                    steps.push({ l: low, h: high, m: mid, line: 5, msg: `${userData[mid]} < ${target}. Search right.` });
+                    low = mid + 1;
+                    steps.push({ l: low, h: high, m: mid, line: 6, msg: `Update: low = ${low}` });
+                } else {
+                    steps.push({ l: low, h: high, m: mid, line: 7, msg: `${userData[mid]} > ${target}. Search left.` });
+                    high = mid - 1;
+                    steps.push({ l: low, h: high, m: mid, line: 8, msg: `Update: high = ${high}` });
+                }
+            }
+            if (low > high) steps.push({ l: low, h: high, m: null, line: 10, msg: "Target not in array." });
+
+            nextStep();
+        }
+
+        function applyStep(idx) {
+            const step = steps[idx];
+            
+            // Code Highlight
+            document.querySelectorAll('.code-line').forEach(l => l.classList.remove('active'));
+            document.getElementById(`line-${step.line}`).classList.add('active');
+            
+            // Array Highlight
+            userData.forEach((_, i) => {
+                const el = document.getElementById(`cell-${i}`);
+                el.className = 'cell';
+                if (i < step.l || i > step.h) el.classList.add('discarded');
+                if (i === step.m) el.classList.add('mid-cell');
+                if (step.found && i === step.m) el.classList.add('found-cell');
+            });
+
+            document.getElementById('statusMsg').innerText = step.msg;
+            document.getElementById('prevBtn').disabled = (idx === 0);
+            document.getElementById('nextBtn').disabled = (idx === steps.length - 1);
+        }
+
+        function nextStep() { if (currentIdx < steps.length - 1) applyStep(++currentIdx); }
+        function prevStep() { if (currentIdx > 0) applyStep(--currentIdx); }
+    </script>
+</body>
+</html>

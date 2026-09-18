@@ -21,7 +21,7 @@ A working introduction to data science for engineering students — building fro
 | 1 | Datatypes, Strings & Collections | [Interactive lecture](/files/cs3006/l34.html) | Available |
 | 2 | Control Flow & Functions | [Interactive lecture](/files/cs3006/l56.html) | Available |
 | 3 | NumPy|[Interactive lecture](/files/cs3006/numpy.html) | Available |
-| 4 | pandas: Tabular Data & Cleaning | — | Coming soon |
+| 4 | pandas: Tabular Data & Cleaning |[Interactive lecture](/files/cs3006/pandas.html) | Available |
 | 5 | Visualisation & Exploratory Analysis | — | Coming soon |
 | 6 | Probability & Descriptive Statistics | — | Coming soon |
 | 7 | Regression | — | Coming soon |

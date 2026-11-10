@@ -24,7 +24,7 @@ A working introduction to data science for engineering students — building fro
 | 4 | pandas: Tabular Data & Cleaning |[Interactive lecture](/files/cs3006/pandas.html) | Available |
 | 5 | Descriptive Statistics, Visualisation & Exploratory Analysis | [Interactive lecture](/files/cs3006/descriptive_statistics.html) | Available |
 | 6 | Probability & Inferential Statistics | — | Coming soon |
-| 7 | Regression | — | Coming soon |
+| 7 | Regression | /files/cs3006/regression.html | Available |
 | 8 | Classification | — | Coming soon |
 | 9 | Model Evaluation & Overfitting | — | Coming soon |
 | 10 | End-to-End Case Study | — | Coming soon |
@@ -34,3 +34,5 @@ A working introduction to data science for engineering students — building fro
 
 
 > **Note to students:** The predict-the-output cards only work if you commit to an answer *before* pressing `R`. Being wrong on record and then finding out why teaches considerably more than guess-and-check.
+
+
